@@ -1,12 +1,12 @@
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use deadpool_diesel::postgres::{Connection, Pool};
 use diesel::{prelude::*, select};
 use tracing::error;
 
 use crate::{
     auth::check_user_pwd,
-    models::{NewSession, Session, User},
-    schema::{sessions, sessions::dsl as sessions_dsl, users, users::dsl as users_dsl},
+    models::{NewSession, Session},
+    schema::{sessions, sessions::dsl as sessions_dsl, users::dsl as users_dsl},
     types::{AppError, Claims},
 };
 

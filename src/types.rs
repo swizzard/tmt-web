@@ -29,19 +29,12 @@ impl AppState {
         Self { pool, keys }
     }
     pub fn from_env() -> Self {
-        use tracing::info;
         // panics
         dotenv().ok();
         let secret = env::var("JWT_SECRET").expect("missing JWT_SECRET");
-        info!("secret: {:?}", &secret);
         let client_secret = env::var("CLIENT_SECRET").expect("missing CLIENT_SECRET");
-        info!("client_secret: {:?}", &client_secret);
         let db_url = env::var("DATABASE_URL").expect("missing DATABASE_URL");
-        info!("db_url: {:?}", &db_url);
         Self::new(secret.as_bytes(), client_secret, db_url)
-    }
-    pub fn client_secret(&self) -> &str {
-        self.keys.client_secret.as_ref()
     }
     pub fn encoding(&self) -> &EncodingKey {
         self.keys.encoding()
@@ -178,17 +171,6 @@ pub struct AuthData {
     pub expiration: DateTime<Utc>,
     pub token: String,
 }
-// #[async_trait]
-// impl<AppState> FromRequestParts<AppState> for Keys {
-//     type Rejection = AuthError;
-//
-//     async fn from_request_parts(
-//         _parts: &mut Parts,
-//         state: &AppState,
-//     ) -> Result<Self, Self::Rejection> {
-//         Ok(state.0.lock().unwrap().keys.clone())
-//     }
-// }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {

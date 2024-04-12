@@ -9,14 +9,13 @@ use axum::{
     Router,
 };
 use routes::*;
-use types::AppState;
+pub use types::AppState;
 
-pub fn make_app() -> Router {
-    let st = AppState::from_env();
+pub fn make_app(state: AppState) -> Router {
     Router::new()
         .route("/", get(hello_world))
         .route("/authorize", post(authorize))
         .route("/private", get(private))
         .route("/logout", post(logout))
-        .with_state(st)
+        .with_state(state)
 }
