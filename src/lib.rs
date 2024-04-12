@@ -1,12 +1,15 @@
 mod auth;
+mod db;
+mod models;
+mod routes;
+mod schema;
 mod types;
-use auth::{encode_jwt, generate_claims};
 use axum::{
-    extract::State,
     routing::{get, post},
-    Json, Router,
+    Router,
 };
-use types::{AppError, AppState, AuthBody, AuthPayload, Claims};
+use routes::*;
+use types::AppState;
 
 pub fn make_app() -> Router {
     let st = AppState::from_env();
@@ -14,30 +17,6 @@ pub fn make_app() -> Router {
         .route("/", get(hello_world))
         .route("/authorize", post(authorize))
         .route("/private", get(private))
+        .route("/logout", post(logout))
         .with_state(st)
-}
-
-async fn hello_world() -> String {
-    tracing::debug!("Hello world");
-    String::from("hello")
-}
-
-async fn authorize(
-    State(st): State<AppState>,
-    Json(payload): Json<AuthPayload>,
-) -> Result<Json<AuthBody>, AppError> {
-    if payload.client_id.is_empty() || payload.client_secret.is_empty() {
-        return Err(AppError::MissingCredentials);
-    }
-    if payload.client_secret != st.client_secret() {
-        return Err(AppError::WrongCredentials);
-    }
-    let claims = generate_claims(payload.client_id.clone());
-    let token = encode_jwt(claims, &st.encoding())?;
-    Ok(Json(AuthBody::new(token)))
-}
-
-async fn private(claims: Claims) -> Result<String, AppError> {
-    tracing::debug!("private");
-    Ok(format!("Hello {}", claims.sub))
 }

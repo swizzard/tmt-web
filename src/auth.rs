@@ -1,11 +1,13 @@
+use crate::db::session_from_claims;
 use crate::types::{AppError, Claims};
 use axum::{http::request::Parts, RequestPartsExt};
 use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
-use chrono::prelude::{DateTime, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use diesel::expression::functions::sql_function;
+use diesel::sql_types::Text;
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 pub(crate) async fn get_claims(parts: &mut Parts, key: &DecodingKey) -> Result<Claims, AppError> {
     let TypedHeader(Authorization(bearer)) = parts
@@ -15,30 +17,21 @@ pub(crate) async fn get_claims(parts: &mut Parts, key: &DecodingKey) -> Result<C
             tracing::error!("error parsing token: {:?}", e);
             AppError::InvalidToken
         })?;
-    let token_data = decode::<Claims>(bearer.token(), key, &Validation::default())
-        .map_err(|_| AppError::InvalidToken)?;
+    let token = bearer.token();
+    tracing::info!("token: {:?}", &token);
+    let validation = Validation::new(Algorithm::HS256);
+    let token_data = decode::<Claims>(bearer.token(), key, &validation).map_err(|e| {
+        tracing::error!("error decoding token: {:?}", e);
+        AppError::InvalidToken
+    })?;
     let claims = token_data.claims;
     Ok(claims)
 }
-pub(crate) async fn validate_claims(claims: &Claims) -> Result<(), AppError> {
-    if let Some(exp) = DateTime::from_timestamp(claims.exp, 0) {
-        if exp < Utc::now() {
-            Err(AppError::ExpiredToken)
-        } else {
-            Ok(())
-        }
-    } else {
-        Err(AppError::InvalidToken)
-    }
-}
-pub(crate) fn generate_claims(client_id: String) -> Claims {
-    let exp = Utc::now() + chrono::TimeDelta::minutes(15);
-    Claims {
-        exp: exp.timestamp(),
-        sub: client_id,
-    }
-}
 
 pub(crate) fn encode_jwt(claims: Claims, key: &EncodingKey) -> Result<String, AppError> {
-    encode(&Header::default(), &claims, key).map_err(|_| AppError::TokenCreation)
+    let mut headers = Header::default();
+    headers.alg = Algorithm::HS256;
+    encode(&headers, &claims, key).map_err(|_| AppError::TokenCreation)
 }
+
+sql_function!(fn check_user_pwd(email: Text, pwd: Text) -> Bool);

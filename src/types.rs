@@ -1,36 +1,44 @@
-use crate::auth::{get_claims, validate_claims};
+use crate::auth::get_claims;
+use crate::models::Session;
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Response},
-    Json, RequestPartsExt,
+    Json,
 };
 use chrono::{DateTime, Utc};
+use deadpool_diesel::postgres;
+use dotenvy::dotenv;
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{convert::Infallible, env};
-use tracing::error;
 
 #[derive(Clone)]
 pub struct AppState {
-    db: FakeDB,
+    pool: postgres::Pool,
     keys: Keys,
 }
 
 impl AppState {
-    fn new(secret: &[u8], client_secret: String) -> Self {
-        Self {
-            db: FakeDB {},
-            keys: Keys::new(secret, client_secret),
-        }
+    fn new(secret: &[u8], client_secret: String, db_url: String) -> Self {
+        let manager = postgres::Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);
+        let pool = postgres::Pool::builder(manager).build().unwrap();
+        let keys = Keys::new(secret, client_secret);
+        Self { pool, keys }
     }
     pub fn from_env() -> Self {
+        use tracing::info;
         // panics
+        dotenv().ok();
         let secret = env::var("JWT_SECRET").expect("missing JWT_SECRET");
+        info!("secret: {:?}", &secret);
         let client_secret = env::var("CLIENT_SECRET").expect("missing CLIENT_SECRET");
-        Self::new(secret.as_bytes(), client_secret)
+        info!("client_secret: {:?}", &client_secret);
+        let db_url = env::var("DATABASE_URL").expect("missing DATABASE_URL");
+        info!("db_url: {:?}", &db_url);
+        Self::new(secret.as_bytes(), client_secret, db_url)
     }
     pub fn client_secret(&self) -> &str {
         self.keys.client_secret.as_ref()
@@ -40,6 +48,15 @@ impl AppState {
     }
     pub fn decoding(&self) -> &DecodingKey {
         self.keys.decoding()
+    }
+    pub fn pool(&self) -> postgres::Pool {
+        self.pool.clone()
+    }
+    pub async fn conn(&self) -> Result<postgres::Connection, AppError> {
+        self.pool.get().await.map_err(|e| {
+            tracing::error!("db connection error: {:?}", e);
+            AppError::InternalServerError
+        })
     }
 }
 
@@ -54,9 +71,6 @@ where
         Ok(Self::from_ref(state))
     }
 }
-
-#[derive(Clone)]
-pub(crate) struct FakeDB {}
 
 #[derive(Clone)]
 pub(crate) struct Keys {
@@ -84,7 +98,18 @@ impl Keys {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub(crate) sub: String,
+    pub(crate) jti: String,
     pub(crate) exp: i64,
+}
+
+impl Claims {
+    pub fn from_session(session: &Session) -> Self {
+        Self {
+            sub: session.user_id.clone(),
+            jti: session.id.clone(),
+            exp: session.expires.and_utc().timestamp(),
+        }
+    }
 }
 
 #[async_trait]
@@ -97,15 +122,8 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let st = AppState::from_ref(state);
-        // let st = parts
-        //     .extract_with_state::<AppState, _>(state)
-        //     .await
-        //     .map_err(|e| {
-        //         error!("error extracting claims state {:?}", e);
-        //         AppError::InternalServerError
-        //     })?;
         let claims = get_claims(parts, st.decoding()).await?;
-        validate_claims(&claims).await?;
+        tracing::info!("claims {:?}", claims);
         Ok(claims)
     }
 }
@@ -130,6 +148,20 @@ pub struct AuthPayload {
     pub client_secret: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LogoutResult {
+    pub session_id: String,
+    pub ok: bool,
+}
+impl LogoutResult {
+    pub fn new(session_id: String) -> Self {
+        Self {
+            session_id,
+            ok: true,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum AppError {
     WrongCredentials,
@@ -138,6 +170,7 @@ pub enum AppError {
     InvalidToken,
     ExpiredToken,
     InternalServerError,
+    DBError,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -168,6 +201,7 @@ impl IntoResponse for AppError {
             AppError::InternalServerError => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
             }
+            AppError::DBError => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
         };
         let body = Json(json!({
             "error": error_message,

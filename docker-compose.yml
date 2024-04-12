@@ -1,0 +1,11 @@
+version: "2"
+services:
+  db:
+    image: docker.io/postgres:16
+    restart: always
+    ports:
+      - "7654:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: tmt
