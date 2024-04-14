@@ -13,6 +13,12 @@ class TestTmt(unittest.TestCase):
                              headers={'Content-Type': 'application/json'})
         return resp.json()
 
+    def _logout(self, token: str):
+        resp = requests.post(
+            f'{self.url}/logout',
+            headers={'Authorization': f'Bearer {token}'})
+        return resp.json()
+
 
 class TestTmtAuth(TestTmt):
     def test_authorize(self):
@@ -53,6 +59,22 @@ class TestTmtAuth(TestTmt):
             f'{self.url}/private',
             headers={'Authorization': f'Bearer {token}'})
         self.assertEqual(logged_out_resp.status_code, 400)
+
+
+class TestTmtApi(TestTmt):
+    token: str = None
+
+    def _logout(self):
+        if self.token:
+            super()._logout(self.token)
+            self.token = None
+
+    def _login(self):
+        resp = self._authorize()
+        self.token = resp['access_token']
+
+    def tearDown(self):
+        self._logout()
 
 
 if __name__ == '__main__':
