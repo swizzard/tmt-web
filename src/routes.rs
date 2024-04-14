@@ -1,8 +1,10 @@
 pub mod auth;
+pub mod tabs;
 
 use crate::{models::Session, types::AppError};
 
 pub(crate) use auth::{authorize, logout};
+
 pub(crate) async fn hello_world() -> String {
     tracing::debug!("Hello world");
     String::from("hello")

@@ -22,19 +22,18 @@ pub struct AppState {
 }
 
 impl AppState {
-    fn new(secret: &[u8], client_secret: String, db_url: String) -> Self {
+    fn new(secret: &[u8], db_url: String) -> Self {
         let manager = postgres::Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);
         let pool = postgres::Pool::builder(manager).build().unwrap();
-        let keys = Keys::new(secret, client_secret);
+        let keys = Keys::new(secret);
         Self { pool, keys }
     }
     pub fn from_env() -> Self {
         // panics
         dotenv().ok();
         let secret = env::var("JWT_SECRET").expect("missing JWT_SECRET");
-        let client_secret = env::var("CLIENT_SECRET").expect("missing CLIENT_SECRET");
         let db_url = env::var("DATABASE_URL").expect("missing DATABASE_URL");
-        Self::new(secret.as_bytes(), client_secret, db_url)
+        Self::new(secret.as_bytes(), db_url)
     }
     pub fn encoding(&self) -> &EncodingKey {
         self.keys.encoding()
@@ -69,15 +68,13 @@ where
 pub(crate) struct Keys {
     encoding: EncodingKey,
     decoding: DecodingKey,
-    client_secret: String,
 }
 
 impl Keys {
-    pub fn new(secret: &[u8], client_secret: String) -> Self {
+    pub fn new(secret: &[u8]) -> Self {
         Self {
             encoding: EncodingKey::from_secret(secret),
             decoding: DecodingKey::from_secret(secret),
-            client_secret,
         }
     }
     fn encoding(&self) -> &EncodingKey {
@@ -164,6 +161,7 @@ pub enum AppError {
     ExpiredToken,
     InternalServerError,
     DBError,
+    NotFound,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -184,6 +182,7 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
             }
             AppError::DBError => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
+            AppError::NotFound => (StatusCode::NOT_FOUND, "Not Found"),
         };
         let body = Json(json!({
             "error": error_message,

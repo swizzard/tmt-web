@@ -1,6 +1,9 @@
 use crate::{
     auth::encode_jwt,
-    db::{delete_session, new_session, validate_password},
+    db::{
+        session::{delete_session, new_session},
+        validate_password,
+    },
     types::{AppError, AppState, AuthBody, AuthPayload, Claims, LogoutResult},
 };
 use axum::{extract::State, Json};

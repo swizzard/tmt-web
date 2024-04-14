@@ -17,5 +17,6 @@ pub fn make_app(state: AppState) -> Router {
         .route("/authorize", post(authorize))
         .route("/private", get(private))
         .route("/logout", post(logout))
+        .merge(tabs::tabs_router())
         .with_state(state)
 }

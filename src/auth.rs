@@ -1,4 +1,3 @@
-use crate::db::session_from_claims;
 use crate::types::{AppError, Claims};
 use axum::{http::request::Parts, RequestPartsExt};
 use axum_extra::{

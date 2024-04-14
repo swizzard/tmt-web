@@ -13,6 +13,11 @@
   * user_id (uuid, references `user.id`)
   * url (text)
   * notes (text)
+  * `has many` Tag
+* Tag
+  * id (uuid, unique)
+  * user_id (uuid, referencess `user.id`)
+  * tag (text)
 
 ## Notes
 
