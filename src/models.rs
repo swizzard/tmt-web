@@ -8,16 +8,31 @@ use axum::{
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Queryable, Selectable)]
+#[derive(Debug, Queryable, Selectable, Serialize, Identifiable, PartialEq)]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
     pub id: String,
     pub email: String,
     pub password: String,
+    pub confirmed: bool,
 }
 
-#[derive(Debug, Queryable, Selectable)]
+#[derive(Debug, Insertable, Deserialize, Serialize)]
+#[diesel(table_name = crate::schema::users)]
+pub struct NewUser {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Queryable, Selectable, Serialize)]
+#[diesel(table_name = crate::schema::users)]
+pub struct CreatedUser {
+    pub id: String,
+    pub email: String,
+}
+
+#[derive(Debug, Queryable, Selectable, Identifiable, PartialEq)]
 #[diesel(table_name = crate::schema::sessions)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Session {
@@ -35,7 +50,7 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        use crate::db::session::session_from_claims;
+        use crate::db::sessions::session_from_claims;
         let st = AppState::from_ref(state);
         let claims = get_claims(parts, st.decoding()).await?;
         let conn = st.conn().await?;
@@ -65,4 +80,52 @@ pub struct NewTab {
     pub user_id: String,
     pub url: String,
     pub notes: Option<String>,
+}
+
+#[derive(Debug, diesel_derive_enum::DbEnum, Serialize, Deserialize)]
+#[ExistingTypePath = "crate::schema::sql_types::InviteStatus"]
+pub enum InviteStatus {
+    Created,
+    Sent,
+    Accepted,
+    Expired,
+}
+
+#[derive(Debug, Queryable, Selectable, Serialize)]
+#[diesel(table_name = crate::schema::invites)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Invite {
+    pub id: String,
+    pub user_id: String,
+    pub email: String,
+    pub status: InviteStatus,
+    pub expires: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Insertable, Deserialize, Serialize)]
+#[diesel(table_name = crate::schema::invites)]
+pub struct NewInvite {
+    pub user_id: String,
+    pub email: String,
+}
+
+#[derive(Debug, Selectable, Queryable, Serialize)]
+#[diesel(table_name = crate::schema::invites)]
+pub struct CreatedInvite {
+    pub id: String,
+    pub user_id: String,
+    pub email: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UserInviteResponse {
+    pub email: String,
+    pub invite_id: String,
+    pub user_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UserConfirmationPayload {
+    pub email: String,
+    pub invite_id: String,
 }

@@ -18,5 +18,6 @@ pub fn make_app(state: AppState) -> Router {
         .route("/private", get(private))
         .route("/logout", post(logout))
         .merge(tabs::tabs_router())
+        .merge(users::users_router())
         .with_state(state)
 }

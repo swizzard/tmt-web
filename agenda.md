@@ -8,6 +8,7 @@
 [x] can't see content when not authorized via token
 [ ] create user
   [ ] confirm user creation
+[ ] can't login as unconfirmed user
 [ ] delete user
 
 ## browser
@@ -18,6 +19,7 @@
 [ ] can't see content when not authorized via 
 [ ] create user
   [ ] confirm user creation
+[ ] can't login as unconfirmed user
 [ ] delete user
 
 ## misc

@@ -152,6 +152,12 @@ impl LogoutResult {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthData {
+    pub expiration: DateTime<Utc>,
+    pub token: String,
+}
+
 #[derive(Debug)]
 pub enum AppError {
     WrongCredentials,
@@ -162,27 +168,30 @@ pub enum AppError {
     InternalServerError,
     DBError,
     NotFound,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuthData {
-    pub expiration: DateTime<Utc>,
-    pub token: String,
+    DBErrorWithMessage(String),
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AppError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong credentials"),
-            AppError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing credentials"),
-            AppError::TokenCreation => (StatusCode::INTERNAL_SERVER_ERROR, "Token creation error"),
-            AppError::InvalidToken => (StatusCode::BAD_REQUEST, "Invalid token"),
-            AppError::ExpiredToken => (StatusCode::UNAUTHORIZED, "Token Expired"),
-            AppError::InternalServerError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+        let (status, error_message): (StatusCode, String) = match self {
+            AppError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong credentials".into()),
+            AppError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing credentials".into()),
+            AppError::TokenCreation => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Token creation error".into(),
+            ),
+            AppError::InvalidToken => (StatusCode::BAD_REQUEST, "Invalid token".into()),
+            AppError::ExpiredToken => (StatusCode::UNAUTHORIZED, "Token Expired".into()),
+            AppError::InternalServerError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".into(),
+            ),
+            AppError::DBError => (StatusCode::INTERNAL_SERVER_ERROR, "Database error".into()),
+            AppError::NotFound => (StatusCode::NOT_FOUND, "Not Found".into()),
+            AppError::DBErrorWithMessage(msg) => {
+                let err_msg = format!("Database error: {}", msg);
+                (StatusCode::BAD_REQUEST, err_msg)
             }
-            AppError::DBError => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
-            AppError::NotFound => (StatusCode::NOT_FOUND, "Not Found"),
         };
         let body = Json(json!({
             "error": error_message,

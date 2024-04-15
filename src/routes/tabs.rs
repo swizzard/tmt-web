@@ -15,7 +15,6 @@ pub fn tabs_router() -> Router<AppState> {
         .route("/tabs/:tab_id", get(get_tab))
 }
 
-#[axum::debug_handler]
 async fn create(
     State(st): State<AppState>,
     session: Session,
@@ -30,7 +29,6 @@ async fn create(
     }
 }
 
-#[axum::debug_handler]
 async fn get_tab(
     State(st): State<AppState>,
     session: Session,

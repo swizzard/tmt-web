@@ -19,6 +19,7 @@ pub async fn new_session(pool: Pool, user_email: String) -> Result<Session, AppE
         .interact(|conn| {
             users_dsl::users
                 .filter(users_dsl::email.eq(user_email))
+                .filter(users_dsl::confirmed.eq(true))
                 .select(users_dsl::id)
                 .first(conn)
         })
@@ -92,6 +93,8 @@ pub async fn session_from_claims(conn: Connection, claims: Claims) -> Result<Ses
     let resp: Option<Session> = conn
         .interact(|conn| {
             sessions
+                .inner_join(users_dsl::users)
+                .filter(users_dsl::confirmed.eq(true))
                 .filter(id.eq(claims.jti))
                 .filter(user_id.eq(claims.sub))
                 .select(Session::as_select())

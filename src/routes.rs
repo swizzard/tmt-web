@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod tabs;
+pub mod users;
 
 use crate::{models::Session, types::AppError};
 

@@ -1,7 +1,7 @@
 use crate::{
     auth::encode_jwt,
     db::{
-        session::{delete_session, new_session},
+        sessions::{delete_session, new_session},
         validate_password,
     },
     types::{AppError, AppState, AuthBody, AuthPayload, Claims, LogoutResult},
