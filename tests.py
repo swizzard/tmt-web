@@ -2,6 +2,8 @@ import json
 import requests
 import unittest
 
+import pre_tests
+
 
 class TestTmt(unittest.TestCase):
     url: str = 'http://localhost:8080'
@@ -78,4 +80,6 @@ class TestTmtApi(TestTmt):
 
 
 if __name__ == '__main__':
+    pre_tests.main()
+    input('Is tmt-web running?')
     unittest.main()
