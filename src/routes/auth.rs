@@ -8,6 +8,7 @@ use crate::{
 };
 use axum::{extract::State, Json};
 
+#[axum::debug_handler]
 pub(crate) async fn authorize(
     State(st): State<AppState>,
     Json(payload): Json<AuthPayload>,
@@ -28,6 +29,7 @@ pub(crate) async fn authorize(
     }
 }
 
+#[axum::debug_handler]
 pub(crate) async fn logout(
     State(st): State<AppState>,
     claims: Claims,

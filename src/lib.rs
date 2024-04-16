@@ -9,9 +9,11 @@ use axum::{
     Router,
 };
 use routes::*;
-pub use types::AppState;
+use std::sync::Arc;
+pub use types::AppSt;
 
-pub fn make_app(state: AppState) -> Router {
+pub fn make_app(state: Box<dyn AppSt>) -> Router {
+    let st = Arc::new(state);
     Router::new()
         .route("/", get(hello_world))
         .route("/authorize", post(authorize))
@@ -19,5 +21,5 @@ pub fn make_app(state: AppState) -> Router {
         .route("/logout", post(logout))
         .merge(tabs::tabs_router())
         .merge(users::users_router())
-        .with_state(state)
+        .with_state(st)
 }

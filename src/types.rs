@@ -13,38 +13,55 @@ use dotenvy::dotenv;
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{convert::Infallible, env};
+use std::{convert::Infallible, env, sync::Arc};
+
+pub trait AppS {
+    fn encoding(&self) -> &EncodingKey;
+    fn decoding(&self) -> &DecodingKey;
+    fn pool(&self) -> postgres::Pool;
+}
+
+#[async_trait]
+pub trait AsyncAppS {
+    async fn conn(&self) -> Result<postgres::Connection, AppError>;
+}
 
 #[derive(Clone)]
-pub struct AppState {
+pub struct AS {
     pool: postgres::Pool,
     keys: Keys,
 }
 
-impl AppState {
+impl AS {
     fn new(secret: &[u8], db_url: String) -> Self {
         let manager = postgres::Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);
         let pool = postgres::Pool::builder(manager).build().unwrap();
         let keys = Keys::new(secret);
         Self { pool, keys }
     }
-    pub fn from_env() -> Self {
+    fn from_env() -> Self {
         // panics
         dotenv().ok();
         let secret = env::var("JWT_SECRET").expect("missing JWT_SECRET");
         let db_url = env::var("DATABASE_URL").expect("missing DATABASE_URL");
         Self::new(secret.as_bytes(), db_url)
     }
-    pub fn encoding(&self) -> &EncodingKey {
+}
+impl AppS for AS {
+    fn encoding(&self) -> &EncodingKey {
         self.keys.encoding()
     }
-    pub fn decoding(&self) -> &DecodingKey {
+    fn decoding(&self) -> &DecodingKey {
         self.keys.decoding()
     }
-    pub fn pool(&self) -> postgres::Pool {
+    fn pool(&self) -> postgres::Pool {
         self.pool.clone()
     }
-    pub async fn conn(&self) -> Result<postgres::Connection, AppError> {
+}
+
+#[async_trait]
+impl AsyncAppS for AS {
+    async fn conn(&self) -> Result<postgres::Connection, AppError> {
         self.pool.get().await.map_err(|e| {
             tracing::error!("db connection error: {:?}", e);
             AppError::InternalServerError
@@ -52,8 +69,11 @@ impl AppState {
     }
 }
 
+pub trait AppSt: AppS + AsyncAppS + Send + Sync {}
+pub type AppState = Arc<Box<dyn AppSt>>;
+
 #[async_trait]
-impl<S> FromRequestParts<S> for AppState
+impl<S> FromRequestParts<S> for AS
 where
     Self: FromRef<S>,
     S: Send + Sync,

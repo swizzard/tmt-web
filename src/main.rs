@@ -1,6 +1,6 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use tmt_web::{make_app, AppState};
+use tmt_web::{make_app, AS};
 
 #[tokio::main]
 async fn main() {
@@ -11,7 +11,7 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
-    let app = make_app(AppState::from_env());
+    let app = make_app(AS::from_env());
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     tracing::info!("listening on 0.0.0.0:8080");
     axum::serve(listener, app).await.unwrap();
