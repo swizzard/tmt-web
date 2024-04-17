@@ -4,20 +4,15 @@ mod models;
 mod routes;
 mod schema;
 mod types;
-use axum::{
-    routing::{get, post},
-    Router,
-};
-use routes::*;
+use axum::Router;
+use routes::{auth::auth_router, misc::misc_router, tabs::tabs_router, users::users_router};
 pub use types::AppState;
 
 pub fn make_app(state: AppState) -> Router {
     Router::new()
-        .route("/", get(hello_world))
-        .route("/authorize", post(authorize))
-        .route("/private", get(private))
-        .route("/logout", post(logout))
-        .merge(tabs::tabs_router())
-        .merge(users::users_router())
+        .merge(auth_router())
+        .merge(misc_router())
+        .merge(tabs_router())
+        .merge(users_router())
         .with_state(state)
 }

@@ -25,9 +25,25 @@ pub struct NewUser {
     pub password: String,
 }
 
+#[cfg(test)]
+#[derive(Debug, Insertable, Deserialize, Serialize)]
+#[diesel(table_name = crate::schema::users)]
+pub struct NewConfirmedUser {
+    pub email: String,
+    pub password: String,
+    pub confirmed: bool,
+}
+
 #[derive(Debug, Queryable, Selectable, Serialize)]
 #[diesel(table_name = crate::schema::users)]
 pub struct CreatedUser {
+    pub id: String,
+    pub email: String,
+}
+
+#[derive(Debug, Queryable, Selectable, Serialize)]
+#[diesel(table_name = crate::schema::users)]
+pub struct DeconfirmedUser {
     pub id: String,
     pub email: String,
 }

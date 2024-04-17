@@ -1,6 +1,8 @@
 use super::util::get_conn;
 use crate::{
-    models::{CreatedInvite, CreatedUser, Invite, InviteStatus, NewInvite, NewUser, User},
+    models::{
+        CreatedInvite, CreatedUser, DeconfirmedUser, Invite, InviteStatus, NewInvite, NewUser, User,
+    },
     schema::invites,
     schema::invites::dsl as invites_dsl,
     schema::users,
@@ -16,6 +18,34 @@ pub async fn new_user(conn: Connection, user: NewUser) -> Result<CreatedUser, Ap
         diesel::insert_into(users::table)
             .values(user)
             .returning(CreatedUser::as_returning())
+            .get_result(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error creating user: {:?}", e);
+        AppError::DBErrorWithMessage(e.to_string())
+    })?
+    .map_err(|e| {
+        tracing::error!("error creating user: {:?}", e);
+        AppError::DBErrorWithMessage(e.to_string())
+    })
+}
+
+#[cfg(test)]
+pub async fn new_user_confirmed(
+    conn: Connection,
+    NewUser { email, password }: NewUser,
+) -> Result<User, AppError> {
+    use crate::models::NewConfirmedUser;
+    conn.interact(|conn| {
+        let cu_data = NewConfirmedUser {
+            email,
+            password,
+            confirmed: true,
+        };
+        diesel::insert_into(users::table)
+            .values(cu_data)
+            .returning(User::as_returning())
             .get_result(conn)
     })
     .await
@@ -136,6 +166,30 @@ pub async fn get_invite(conn: Connection, invite_id: String) -> Result<Invite, A
     })?
     .map_err(|e| {
         tracing::error!("error confirming invite: {:?}", e);
+        AppError::DBErrorWithMessage(e.to_string())
+    })
+}
+
+#[cfg(test)]
+pub async fn deconfirm_user(
+    conn: Connection,
+    user_id: String,
+) -> Result<DeconfirmedUser, AppError> {
+    conn.interact(|conn| {
+        diesel::update(users_dsl::users)
+            .filter(users_dsl::id.eq(user_id))
+            .filter(users_dsl::confirmed.eq(true))
+            .set(users_dsl::confirmed.eq(false))
+            .returning(DeconfirmedUser::as_returning())
+            .get_result(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error deconfirming user: {:?}", e);
+        AppError::DBErrorWithMessage(e.to_string())
+    })?
+    .map_err(|e| {
+        tracing::error!("error deconfirming user: {:?}", e);
         AppError::DBErrorWithMessage(e.to_string())
     })
 }

@@ -1,8 +1,8 @@
 use crate::{
     db::users,
     models::{
-        CreatedInvite, CreatedUser, Invite, NewInvite, NewUser, User, UserConfirmationPayload,
-        UserInviteResponse,
+        CreatedInvite, CreatedUser, DeconfirmedUser, Invite, NewInvite, NewUser, User,
+        UserConfirmationPayload, UserInviteResponse,
     },
     types::{AppError, AppState},
 };
@@ -12,12 +12,23 @@ use axum::{
     Json, Router,
 };
 
-pub fn users_router() -> Router<AppState> {
+fn _users_router() -> Router<AppState> {
     Router::new()
         .route("/users", post(create_user))
         .route("/users/invites/:invite_id", get(get_invite))
         .route("/users/invites/:invite_id", post(send_invite))
         .route("/users/:user_id", post(confirm_user))
+}
+
+#[cfg(not(test))]
+pub fn users_router() -> Router<AppState> {
+    _users_router()
+}
+#[cfg(test)]
+pub fn users_router() -> Router<AppState> {
+    _users_router()
+        .route("/users/:user_id/deconfirm", post(deconfirm_user))
+        .route("/users/_test", post(_test_create_confirmed_user))
 }
 
 pub async fn create_user(
@@ -68,4 +79,26 @@ pub async fn confirm_user(
 ) -> Result<Json<User>, AppError> {
     let user = users::confirm_user(st.pool(), invite_id, user_id, email).await?;
     Ok(Json(user))
+}
+
+// cfg(test) for now, needs better security
+#[cfg(test)]
+pub async fn deconfirm_user(
+    State(st): State<AppState>,
+    Path(user_id): Path<String>,
+) -> Result<Json<DeconfirmedUser>, AppError> {
+    let conn = st.conn().await?;
+    let res = users::deconfirm_user(conn, user_id).await?;
+    Ok(Json(res))
+}
+
+// cfg(test) forever, lol
+#[cfg(test)]
+pub async fn _test_create_confirmed_user(
+    State(st): State<AppState>,
+    Json(new_user_data): Json<NewUser>,
+) -> Result<Json<User>, AppError> {
+    let conn = st.conn().await?;
+    let res = users::new_user_confirmed(conn, new_user_data).await?;
+    Ok(Json(res))
 }

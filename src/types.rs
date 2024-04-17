@@ -28,11 +28,20 @@ impl AppState {
         let keys = Keys::new(secret);
         Self { pool, keys }
     }
+    #[cfg(not(test))]
     pub fn from_env() -> Self {
         // panics
         dotenv().ok();
         let secret = env::var("JWT_SECRET").expect("missing JWT_SECRET");
         let db_url = env::var("DATABASE_URL").expect("missing DATABASE_URL");
+        Self::new(secret.as_bytes(), db_url)
+    }
+    #[cfg(test)]
+    pub fn from_env() -> Self {
+        // panics
+        dotenv().ok();
+        let secret = env::var("JWT_SECRET_TEST").expect("missing JWT_SECRET");
+        let db_url = env::var("DATABASE_URL_TEST").expect("missing DATABASE_URL");
         Self::new(secret.as_bytes(), db_url)
     }
     pub fn encoding(&self) -> &EncodingKey {

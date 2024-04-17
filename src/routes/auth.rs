@@ -6,7 +6,13 @@ use crate::{
     },
     types::{AppError, AppState, AuthBody, AuthPayload, Claims, LogoutResult},
 };
-use axum::{extract::State, Json};
+use axum::{extract::State, routing::post, Json, Router};
+
+pub fn auth_router() -> Router<AppState> {
+    Router::new()
+        .route("/authorize", post(authorize))
+        .route("/logout", post(logout))
+}
 
 pub(crate) async fn authorize(
     State(st): State<AppState>,
