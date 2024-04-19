@@ -27,4 +27,5 @@
 [x] pg trigger to hash password on user insert
   [x] also trigger on update iff password changed
 [ ] tests (https://medium.com/intelliconnect-engineering/step-by-step-guide-to-test-driven-development-tdd-in-rust-axum-5bef05fd7366)
-[ ] `users.state` column
+[x] `users.state` column
+[ ] nonexistent user login shouldn't return 500

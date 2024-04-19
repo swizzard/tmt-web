@@ -87,6 +87,23 @@ pub async fn delete_session(conn: Connection, session_id: String) -> Result<(), 
     Ok(())
 }
 
+#[cfg(test)]
+pub(crate) async fn delete_user_sessions(
+    conn: Connection,
+    del_user_id: String,
+) -> Result<(), AppError> {
+    use crate::schema::sessions::dsl::*;
+    let dui = del_user_id.clone();
+    let _ = conn
+        .interact(|conn| diesel::delete(sessions.filter(user_id.eq(del_user_id))).execute(conn))
+        .await
+        .map_err(|e| {
+            error!("error deleting user {:?} sessions: {:?}", dui, e);
+            AppError::DBError
+        })?;
+    Ok(())
+}
+
 pub async fn session_from_claims(conn: Connection, claims: Claims) -> Result<Session, AppError> {
     use crate::schema::sessions::dsl::*;
 
@@ -124,4 +141,27 @@ pub async fn session_from_claims(conn: Connection, claims: Claims) -> Result<Ses
 fn session_expired(session: &Session) -> bool {
     let now = Utc::now().naive_utc();
     session.expires < now
+}
+
+#[cfg(test)]
+pub(crate) async fn get_session(
+    conn: Connection,
+    session_id: String,
+) -> Result<Option<Session>, AppError> {
+    conn.interact(|conn| {
+        sessions_dsl::sessions
+            .filter(sessions_dsl::id.eq(session_id))
+            .select(Session::as_select())
+            .first(conn)
+            .optional()
+    })
+    .await
+    .map_err(|e| {
+        error!("error retrieving session: {:?}", e);
+        AppError::DBError
+    })?
+    .map_err(|e| {
+        error!("error retrieving session: {:?}", e);
+        AppError::DBError
+    })
 }

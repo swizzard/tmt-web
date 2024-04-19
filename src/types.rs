@@ -1,4 +1,4 @@
-use crate::auth::get_claims;
+use crate::auth::{encode_jwt, get_claims};
 use crate::models::Session;
 use axum::{
     async_trait,
@@ -23,15 +23,15 @@ pub struct AppState {
 
 impl AppState {
     fn new(secret: &[u8], db_url: String) -> Self {
-        let manager = postgres::Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);
-        let pool = postgres::Pool::builder(manager).build().unwrap();
         let keys = Keys::new(secret);
+        let pool = make_pool(db_url);
         Self { pool, keys }
     }
     #[cfg(not(test))]
     pub fn from_env() -> Self {
         // panics
         dotenv().ok();
+        tracing::info!("loading env");
         let secret = env::var("JWT_SECRET").expect("missing JWT_SECRET");
         let db_url = env::var("DATABASE_URL").expect("missing DATABASE_URL");
         Self::new(secret.as_bytes(), db_url)
@@ -40,8 +40,9 @@ impl AppState {
     pub fn from_env() -> Self {
         // panics
         dotenv().ok();
-        let secret = env::var("JWT_SECRET_TEST").expect("missing JWT_SECRET");
-        let db_url = env::var("DATABASE_URL_TEST").expect("missing DATABASE_URL");
+        tracing::info!("loading test env");
+        let secret = env::var("JWT_SECRET_TEST").expect("missing JWT_SECRET_TEST");
+        let db_url = env::var("DATABASE_URL_TEST").expect("missing DATABASE_URL_TEST");
         Self::new(secret.as_bytes(), db_url)
     }
     pub fn encoding(&self) -> &EncodingKey {
@@ -109,6 +110,15 @@ impl Claims {
             exp: session.expires.and_utc().timestamp(),
         }
     }
+
+    pub fn to_token(self, encoding_key: &EncodingKey) -> Result<String, AppError> {
+        encode_jwt(self, encoding_key)
+    }
+    #[cfg(test)]
+    pub(crate) fn test_to_token(self) -> Result<String, AppError> {
+        let key = env::var("JWT_SECRET_TEST").expect("missing JWT_SECRET_TEST");
+        self.to_token(&EncodingKey::from_secret(key.as_bytes()))
+    }
 }
 
 #[async_trait]
@@ -127,10 +137,10 @@ where
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AuthBody {
-    access_token: String,
-    token_type: String,
+    pub access_token: String,
+    pub token_type: String,
 }
 impl AuthBody {
     pub(crate) fn new(access_token: String) -> Self {
@@ -141,7 +151,7 @@ impl AuthBody {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AuthPayload {
     pub client_id: String,
     pub client_secret: String,
@@ -167,7 +177,7 @@ pub struct AuthData {
     pub token: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AppError {
     WrongCredentials,
     MissingCredentials,
@@ -180,9 +190,9 @@ pub enum AppError {
     DBErrorWithMessage(String),
 }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let (status, error_message): (StatusCode, String) = match self {
+impl AppError {
+    fn to_status_message(&self) -> (StatusCode, String) {
+        match self {
             AppError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong credentials".into()),
             AppError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing credentials".into()),
             AppError::TokenCreation => (
@@ -201,10 +211,36 @@ impl IntoResponse for AppError {
                 let err_msg = format!("Database error: {}", msg);
                 (StatusCode::BAD_REQUEST, err_msg)
             }
-        };
+        }
+    }
+}
+
+impl std::fmt::Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let (_, msg) = self.to_status_message();
+        write!(f, "Application Error: {}", msg)
+    }
+}
+
+impl std::error::Error for AppError {}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = self.to_status_message();
         let body = Json(json!({
             "error": error_message,
         }));
         (status, body).into_response()
     }
+}
+
+pub(crate) fn make_pool(db_url: String) -> postgres::Pool {
+    let manager = postgres::Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);
+    postgres::Pool::builder(manager).build().unwrap()
+}
+
+#[cfg(test)]
+pub(crate) fn test_pool_from_env() -> postgres::Pool {
+    let db_url = env::var("DATABASE_URL_TEST").expect("missing DATABASE_URL_TEST");
+    make_pool(db_url)
 }

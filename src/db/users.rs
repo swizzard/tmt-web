@@ -1,8 +1,8 @@
 use super::util::get_conn;
+#[cfg(test)]
+use crate::models::{DeconfirmedUser, NewConfirmedUser};
 use crate::{
-    models::{
-        CreatedInvite, CreatedUser, DeconfirmedUser, Invite, InviteStatus, NewInvite, NewUser, User,
-    },
+    models::{CreatedInvite, CreatedUser, Invite, InviteStatus, NewInvite, NewUser, User},
     schema::invites,
     schema::invites::dsl as invites_dsl,
     schema::users,
@@ -34,15 +34,9 @@ pub async fn new_user(conn: Connection, user: NewUser) -> Result<CreatedUser, Ap
 #[cfg(test)]
 pub async fn new_user_confirmed(
     conn: Connection,
-    NewUser { email, password }: NewUser,
+    cu_data: NewConfirmedUser,
 ) -> Result<User, AppError> {
-    use crate::models::NewConfirmedUser;
     conn.interact(|conn| {
-        let cu_data = NewConfirmedUser {
-            email,
-            password,
-            confirmed: true,
-        };
         diesel::insert_into(users::table)
             .values(cu_data)
             .returning(User::as_returning())

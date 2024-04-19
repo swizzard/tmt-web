@@ -26,9 +26,7 @@ pub fn users_router() -> Router<AppState> {
 }
 #[cfg(test)]
 pub fn users_router() -> Router<AppState> {
-    _users_router()
-        .route("/users/:user_id/deconfirm", post(deconfirm_user))
-        .route("/users/_test", post(_test_create_confirmed_user))
+    _users_router().route("/users/:user_id/deconfirm", post(deconfirm_user))
 }
 
 pub async fn create_user(
@@ -93,12 +91,12 @@ pub async fn deconfirm_user(
 }
 
 // cfg(test) forever, lol
-#[cfg(test)]
-pub async fn _test_create_confirmed_user(
-    State(st): State<AppState>,
-    Json(new_user_data): Json<NewUser>,
-) -> Result<Json<User>, AppError> {
-    let conn = st.conn().await?;
-    let res = users::new_user_confirmed(conn, new_user_data).await?;
-    Ok(Json(res))
-}
+// #[cfg(test)]
+// pub async fn _test_create_confirmed_user(
+//     State(st): State<AppState>,
+//     Json(new_user_data): Json<NewUser>,
+// ) -> Result<Json<User>, AppError> {
+//     let conn = st.conn().await?;
+//     let res = users::new_user_confirmed(conn, new_user_data).await?;
+//     Ok(Json(res))
+// }

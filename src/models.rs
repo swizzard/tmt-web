@@ -8,7 +8,7 @@ use axum::{
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Queryable, Selectable, Serialize, Identifiable, PartialEq)]
+#[derive(Debug, Deserialize, Queryable, Selectable, Serialize, Identifiable, PartialEq)]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
@@ -20,6 +20,7 @@ pub struct User {
 
 #[derive(Debug, Insertable, Deserialize, Serialize)]
 #[diesel(table_name = crate::schema::users)]
+#[cfg_attr(test, derive(fake::Dummy))]
 pub struct NewUser {
     pub email: String,
     pub password: String,
@@ -28,6 +29,7 @@ pub struct NewUser {
 #[cfg(test)]
 #[derive(Debug, Insertable, Deserialize, Serialize)]
 #[diesel(table_name = crate::schema::users)]
+#[cfg_attr(test, derive(fake::Dummy))]
 pub struct NewConfirmedUser {
     pub email: String,
     pub password: String,

@@ -32,4 +32,6 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 [dev-dependencies]
 anyhow = "1.0.82"
 axum-test = "14.8.0"
-fake = "2.9.2"
+fake = { version = "2.9.2", features = ["derive"] }
+http = "1.1.0"
+test-log = { version = "0.2.15", features = ["trace", "tracing-subscriber"] }
