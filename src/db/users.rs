@@ -1,4 +1,4 @@
-use super::util::get_conn;
+use super::util::{err_is_not_found, get_conn};
 #[cfg(test)]
 use crate::models::{DeconfirmedUser, NewConfirmedUser};
 use crate::{
@@ -71,11 +71,15 @@ pub async fn new_invite(conn: Connection, invite: NewInvite) -> Result<CreatedIn
     })
 }
 
-pub async fn mark_invite_sent(conn: Connection, invite_id: String) -> Result<Invite, AppError> {
+pub async fn update_invite_status(
+    conn: Connection,
+    invite_id: String,
+    update_status: InviteStatus,
+) -> Result<Invite, AppError> {
     conn.interact(|conn| {
         diesel::update(invites_dsl::invites)
             .filter(invites_dsl::id.eq(invite_id))
-            .set(invites_dsl::status.eq(InviteStatus::Sent))
+            .set(invites_dsl::status.eq(update_status))
             .returning(Invite::as_returning())
             .get_result(conn)
     })
@@ -98,7 +102,8 @@ pub async fn confirm_user(
 ) -> Result<User, AppError> {
     let p = pool.clone();
     let conn = get_conn(p).await?;
-    let _ = confirm_invite(conn, invite_id.clone(), user_id.clone(), email.clone()).await?;
+    let inv_id = confirm_invite(conn, invite_id.clone(), user_id.clone(), email.clone()).await?;
+    tracing::info!("confirmed invite {:?}", inv_id);
     let conn = get_conn(pool).await?;
     conn.interact(|conn| {
         diesel::update(users_dsl::users)
@@ -109,16 +114,21 @@ pub async fn confirm_user(
     })
     .await
     .map_err(|e| {
-        tracing::error!("error confirming invite: {:?}", e);
+        tracing::info!("e1 {:?}", e);
         AppError::DBErrorWithMessage(e.to_string())
     })?
     .map_err(|e| {
-        tracing::error!("error confirming invite: {:?}", e);
-        AppError::DBErrorWithMessage(e.to_string())
+        tracing::info!("e2 {:?}", e);
+        if err_is_not_found(&e) {
+            AppError::NotFound
+        } else {
+            tracing::error!("error confirming invite second err: {:?}", e);
+            AppError::DBErrorWithMessage(e.to_string())
+        }
     })
 }
 
-pub(crate) async fn confirm_invite(
+pub async fn confirm_invite(
     conn: Connection,
     invite_id: String,
     user_id: String,
@@ -142,8 +152,12 @@ pub(crate) async fn confirm_invite(
         AppError::DBErrorWithMessage(e.to_string())
     })?
     .map_err(|e| {
-        tracing::error!("error confirming invite: {:?}", e);
-        AppError::DBErrorWithMessage(e.to_string())
+        if err_is_not_found(&e) {
+            AppError::NotFound
+        } else {
+            tracing::error!("error confirming invite: {:?}", e);
+            AppError::DBErrorWithMessage(e.to_string())
+        }
     })
 }
 
@@ -155,12 +169,16 @@ pub async fn get_invite(conn: Connection, invite_id: String) -> Result<Invite, A
     })
     .await
     .map_err(|e| {
-        tracing::error!("error confirming invite: {:?}", e);
+        tracing::error!("error getting invite: {:?}", e);
         AppError::DBErrorWithMessage(e.to_string())
     })?
     .map_err(|e| {
-        tracing::error!("error confirming invite: {:?}", e);
-        AppError::DBErrorWithMessage(e.to_string())
+        tracing::error!("error getting invite: {:?}", e);
+        if err_is_not_found(&e) {
+            AppError::NotFound
+        } else {
+            AppError::DBErrorWithMessage(e.to_string())
+        }
     })
 }
 
@@ -184,6 +202,41 @@ pub async fn deconfirm_user(
     })?
     .map_err(|e| {
         tracing::error!("error deconfirming user: {:?}", e);
+        AppError::DBErrorWithMessage(e.to_string())
+    })
+}
+
+// cfg(test) until it becomes useful elsewhere
+#[cfg(test)]
+pub async fn get_user(conn: Connection, user_id: String) -> Result<User, AppError> {
+    conn.interact(|conn| {
+        users_dsl::users
+            .filter(users_dsl::id.eq(user_id))
+            .first(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error retrieving user: {:?}", e);
+        AppError::DBErrorWithMessage(e.to_string())
+    })?
+    .map_err(|e| {
+        tracing::error!("error retrieving user: {:?}", e);
+        AppError::DBErrorWithMessage(e.to_string())
+    })
+}
+
+#[cfg(test)]
+pub async fn delete_invite(conn: Connection, invite_id: String) -> Result<usize, AppError> {
+    conn.interact(|conn| {
+        diesel::delete(invites_dsl::invites.filter(invites_dsl::id.eq(invite_id))).execute(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error deleting invite: {:?}", e);
+        AppError::DBErrorWithMessage(e.to_string())
+    })?
+    .map_err(|e| {
+        tracing::error!("error deleting invite: {:?}", e);
         AppError::DBErrorWithMessage(e.to_string())
     })
 }

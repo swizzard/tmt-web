@@ -234,6 +234,12 @@ impl IntoResponse for AppError {
     }
 }
 
+// impl std::convert::From<diesel::result::Error> for AppError {
+//     use diesel::result::Error as DE;
+//     fn from(err: DE) -> AppError {
+//         match err {
+//             DE::NotFound => AppError::NotFound,
+
 pub(crate) fn make_pool(db_url: String) -> postgres::Pool {
     let manager = postgres::Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);
     postgres::Pool::builder(manager).build().unwrap()
