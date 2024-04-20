@@ -202,7 +202,11 @@ pub async fn deconfirm_user(
     })?
     .map_err(|e| {
         tracing::error!("error deconfirming user: {:?}", e);
-        AppError::DBErrorWithMessage(e.to_string())
+        if err_is_not_found(&e) {
+            AppError::NotFound
+        } else {
+            AppError::DBErrorWithMessage(e.to_string())
+        }
     })
 }
 

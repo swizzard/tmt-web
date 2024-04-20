@@ -99,7 +99,11 @@ pub async fn deconfirm_user(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{models::InviteStatus, routes::_test_utils::test_app, types::test_pool_from_env};
+    use crate::{
+        models::{InviteStatus, NewConfirmedUser},
+        routes::_test_utils::test_app,
+        types::test_pool_from_env,
+    };
     use fake::{Fake, Faker};
     use http::StatusCode;
     use serde_json::json;
@@ -319,14 +323,42 @@ mod tests {
 
         Ok(())
     }
-    #[ignore]
     #[test_log::test(tokio::test)]
     async fn test_deconfirm_user_exists() -> anyhow::Result<()> {
+        let server = test_app(users_router())?;
+        let pool = test_pool_from_env();
+        let mut ud = Faker.fake::<NewConfirmedUser>();
+        ud.confirmed = true;
+        let c = pool.get().await?;
+        let cu = users::new_user_confirmed(c, ud).await?;
+        let user_id = cu.id.clone();
+
+        let url = format!("/users/{}/deconfirm", user_id.clone());
+        let resp = server.post(&url).await;
+        resp.assert_status_ok();
+        let du = resp.json::<DeconfirmedUser>();
+        assert_eq!(du.id, user_id.clone());
+        let c = pool.get().await?;
+        let db_user = users::get_user(c, user_id.clone()).await?;
+        assert!(!db_user.confirmed);
         Ok(())
     }
-    #[ignore]
     #[test_log::test(tokio::test)]
     async fn test_deconfirm_user_doesnt_exist() -> anyhow::Result<()> {
+        let server = test_app(users_router())?;
+        let pool = test_pool_from_env();
+        let mut ud = Faker.fake::<NewConfirmedUser>();
+        ud.confirmed = true;
+        let c = pool.get().await?;
+        let cu = users::new_user_confirmed(c, ud).await?;
+        let bad_id = Faker.fake::<String>();
+        let url = format!("/users/{}/deconfirm", bad_id.clone());
+        let resp = server.post(&url).await;
+
+        let c = pool.get().await?;
+        let _d = users::deconfirm_user(c, cu.id.clone()).await?;
+
+        resp.assert_status(StatusCode::NOT_FOUND);
         Ok(())
     }
 }

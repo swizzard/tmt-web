@@ -43,7 +43,7 @@ pub struct CreatedUser {
     pub email: String,
 }
 
-#[derive(Debug, Queryable, Selectable, Serialize)]
+#[derive(Debug, Deserialize, Queryable, Selectable, Serialize)]
 #[diesel(table_name = crate::schema::users)]
 pub struct DeconfirmedUser {
     pub id: String,
