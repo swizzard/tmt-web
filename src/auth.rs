@@ -16,8 +16,6 @@ pub(crate) async fn get_claims(parts: &mut Parts, key: &DecodingKey) -> Result<C
             tracing::error!("error parsing token: {:?}", e);
             AppError::InvalidToken
         })?;
-    let token = bearer.token();
-    tracing::info!("token: {:?}", &token);
     let validation = Validation::new(Algorithm::HS256);
     let token_data = decode::<Claims>(bearer.token(), key, &validation).map_err(|e| {
         tracing::error!("error decoding token: {:?}", e);

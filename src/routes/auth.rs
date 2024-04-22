@@ -24,7 +24,7 @@ pub(crate) async fn authorize(
     let clid = payload.client_id.clone();
     let pwd_valid = validate_password(conn, clid, payload.client_secret).await?;
     if !pwd_valid {
-        return Err(AppError::WrongCredentials);
+        return Err(AppError::BadRequest);
     } else {
         let session = new_session(st.pool(), payload.client_id).await?;
         let claims = Claims::from_session(&session);
@@ -124,7 +124,7 @@ mod test {
         let _ = delete_user_sessions(c, uid.clone()).await?;
 
         // assert
-        resp.assert_status(StatusCode::UNAUTHORIZED);
+        resp.assert_status(StatusCode::BAD_REQUEST);
         Ok(())
     }
 

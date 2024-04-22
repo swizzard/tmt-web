@@ -188,13 +188,16 @@ pub enum AppError {
     DBError,
     NotFound,
     DBErrorWithMessage(String),
+    BadRequest,
 }
 
 impl AppError {
     fn to_status_message(&self) -> (StatusCode, String) {
         match self {
-            AppError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong credentials".into()),
-            AppError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing credentials".into()),
+            AppError::WrongCredentials => (StatusCode::FORBIDDEN, "Wrong credentials".into()),
+            AppError::MissingCredentials => {
+                (StatusCode::UNAUTHORIZED, "Missing credentials".into())
+            }
             AppError::TokenCreation => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Token creation error".into(),
@@ -211,6 +214,7 @@ impl AppError {
                 let err_msg = format!("Database error: {}", msg);
                 (StatusCode::BAD_REQUEST, err_msg)
             }
+            AppError::BadRequest => (StatusCode::BAD_REQUEST, "Invalid request".into()),
         }
     }
 }
@@ -233,12 +237,6 @@ impl IntoResponse for AppError {
         (status, body).into_response()
     }
 }
-
-// impl std::convert::From<diesel::result::Error> for AppError {
-//     use diesel::result::Error as DE;
-//     fn from(err: DE) -> AppError {
-//         match err {
-//             DE::NotFound => AppError::NotFound,
 
 pub(crate) fn make_pool(db_url: String) -> postgres::Pool {
     let manager = postgres::Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);

@@ -10,6 +10,8 @@ use crate::{
 };
 use axum::{
     extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
     routing::{get, post, put},
     Json, Router,
 };
@@ -35,7 +37,7 @@ pub fn users_router() -> Router<AppState> {
 pub async fn create_user(
     State(st): State<AppState>,
     Json(payload): Json<NewUser>,
-) -> Result<Json<UserInviteResponse>, AppError> {
+) -> Result<impl IntoResponse, AppError> {
     let c = st.conn().await?;
     let CreatedUser { id, email } = users::new_user(c, payload).await?;
     let user_id = id.clone();
@@ -51,7 +53,7 @@ pub async fn create_user(
         invite_id: id,
         user_id,
     };
-    Ok(Json(resp_data))
+    Ok((StatusCode::CREATED, Json(resp_data)))
 }
 
 // TODO(SHR): auth???
@@ -105,7 +107,6 @@ mod tests {
         types::test_pool_from_env,
     };
     use fake::{Fake, Faker};
-    use http::StatusCode;
     use serde_json::json;
 
     #[test_log::test(tokio::test)]
@@ -117,7 +118,7 @@ mod tests {
         let create_user_data = Faker.fake::<NewUser>();
         let resp = server.post(&"/users").json(&json!(create_user_data)).await;
 
-        resp.assert_status_ok();
+        resp.assert_status(StatusCode::CREATED);
         let resp_data = resp.json::<UserInviteResponse>();
 
         let pool = test_pool_from_env();
