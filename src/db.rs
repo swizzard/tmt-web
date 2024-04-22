@@ -7,6 +7,7 @@ use diesel::{prelude::*, select};
 use tracing::error;
 
 use crate::{auth::check_user_pwd, types::AppError};
+use util::err_is_deserialization_unexpected_null;
 
 pub async fn validate_password(
     conn: Connection,
@@ -23,8 +24,12 @@ pub async fn validate_password(
             AppError::DBError
         })?
         .map_err(|e| {
-            error!("validate_password db error: {:?}", e);
-            AppError::DBError
+            if err_is_deserialization_unexpected_null(&e) {
+                AppError::NotFound
+            } else {
+                error!("validate_password db error: {:?}", e);
+                AppError::DBError
+            }
         })?;
     Ok(result[0])
 }

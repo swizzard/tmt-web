@@ -156,7 +156,7 @@ mod test {
 
         // assert
         // TODO(SHR): fix this
-        resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+        resp.assert_status(StatusCode::NOT_FOUND);
         Ok(())
     }
 
