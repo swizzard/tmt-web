@@ -28,7 +28,7 @@
   [x] also trigger on update iff password changed
 [x] tests (https://medium.com/intelliconnect-engineering/step-by-step-guide-to-test-driven-development-tdd-in-rust-axum-5bef05fd7366)
 [x] `users.state` column
-[ ] nonexistent user login shouldn't return 500
+[x] nonexistent user login shouldn't return 500
 
 
 ## todo
