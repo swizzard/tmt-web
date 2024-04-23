@@ -5,6 +5,8 @@ mod util;
 use deadpool_diesel::postgres::Connection;
 use diesel::{prelude::*, select};
 use tracing::error;
+#[cfg(test)]
+pub use util::test_util;
 
 use crate::{auth::check_user_pwd, types::AppError};
 use util::err_is_deserialization_unexpected_null;

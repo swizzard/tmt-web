@@ -82,7 +82,7 @@ pub struct NewSession {
     pub user_id: String,
 }
 
-#[derive(Debug, Deserialize, Queryable, Selectable, Serialize)]
+#[derive(Debug, Deserialize, Queryable, Selectable, Serialize, PartialEq)]
 #[diesel(table_name = crate::schema::tabs)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Tab {
@@ -94,6 +94,7 @@ pub struct Tab {
 
 #[derive(Debug, Insertable, Deserialize, Serialize)]
 #[diesel(table_name = crate::schema::tabs)]
+#[cfg_attr(test, derive(fake::Dummy))]
 pub struct NewTab {
     pub user_id: String,
     pub url: String,

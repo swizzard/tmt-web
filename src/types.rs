@@ -158,6 +158,18 @@ pub struct AuthPayload {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct PaginationRequest {
+    pub page: Option<i64>,
+    pub page_size: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaginatedResult<T> {
+    pub results: Vec<T>,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LogoutResult {
     pub session_id: String,
     pub ok: bool,
