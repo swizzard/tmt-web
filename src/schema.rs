@@ -39,6 +39,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    tags (id) {
+        id -> Text,
+        user_id -> Text,
+        tag -> Text,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Text,
         email -> Text,
@@ -50,10 +58,12 @@ diesel::table! {
 diesel::joinable!(invites -> users (user_id));
 diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(tabs -> users (user_id));
+diesel::joinable!(tags -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     invites,
     sessions,
     tabs,
+    tags,
     users,
 );
