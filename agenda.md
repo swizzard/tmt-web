@@ -6,8 +6,8 @@
 
 #### tabs
 
-- [ ] all user tabs
-  - [ ] pagination
+- [x] all user tabs
+  - [x] pagination
 
 #### tags
 
@@ -16,8 +16,10 @@
 - [ ] remove tag from tab
 - [ ] delete tag
 - [ ] list user tags
+
   - [ ] pagination
   - [ ] fuzzy matching?
+
 - [ ] return tags with tab
 
 #### users
