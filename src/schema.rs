@@ -39,6 +39,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    tabs_tags (ix) {
+        ix -> Int8,
+        tab_id -> Text,
+        tag_id -> Text,
+    }
+}
+
+diesel::table! {
     tags (id) {
         id -> Text,
         user_id -> Text,
@@ -58,12 +66,15 @@ diesel::table! {
 diesel::joinable!(invites -> users (user_id));
 diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(tabs -> users (user_id));
+diesel::joinable!(tabs_tags -> tabs (tab_id));
+diesel::joinable!(tabs_tags -> tags (tag_id));
 diesel::joinable!(tags -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     invites,
     sessions,
     tabs,
+    tabs_tags,
     tags,
     users,
 );
