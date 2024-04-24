@@ -1,10 +1,13 @@
 #[cfg(test)]
-use crate::models::DeconfirmedUser;
+use crate::models::user::DeconfirmedUser;
 use crate::{
     db::users,
     models::{
-        CreatedInvite, CreatedUser, Invite, InviteUpdate, NewInvite, NewUser, User,
-        UserConfirmationPayload, UserInviteResponse,
+        invite::{
+            CreatedInvite, Invite, InviteUpdate, NewInvite, UserConfirmationPayload,
+            UserInviteResponse,
+        },
+        user::{CreatedUser, NewUser, User},
     },
     types::{AppError, AppState},
 };
@@ -102,7 +105,7 @@ pub async fn deconfirm_user(
 mod tests {
     use super::*;
     use crate::{
-        models::{InviteStatus, NewConfirmedUser},
+        models::{invite::InviteStatus, user::NewConfirmedUser},
         routes::_test_utils::test_app,
         types::test_pool_from_env,
     };
@@ -111,7 +114,7 @@ mod tests {
 
     #[test_log::test(tokio::test)]
     async fn test_create_user() -> anyhow::Result<()> {
-        use crate::{db::users, models::InviteStatus};
+        use crate::db::users;
 
         let server = test_app(users_router())?;
 
@@ -160,7 +163,7 @@ mod tests {
     }
     #[test_log::test(tokio::test)]
     async fn test_update_invite() -> anyhow::Result<()> {
-        use crate::{db::users, models::InviteStatus};
+        use crate::db::users;
         use http::header;
         let pool = test_pool_from_env();
         let ud = Faker.fake::<NewUser>();

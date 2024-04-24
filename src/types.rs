@@ -1,5 +1,5 @@
 use crate::auth::{encode_jwt, get_claims};
-use crate::models::Session;
+use crate::models::session::Session;
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},

@@ -3,7 +3,7 @@ use diesel::prelude::*;
 
 use crate::{
     db::util::{err_is_not_found, get_conn},
-    models::{NewTab, Tab},
+    models::tab::{NewTab, Tab},
     schema::tabs,
     schema::tabs::dsl as tabs_dsl,
     types::{AppError, PaginatedResult},
@@ -101,6 +101,7 @@ pub async fn get_user_tabs(
     })
 }
 
+#[allow(dead_code)]
 pub async fn delete_tab(
     conn: Connection,
     user_id: String,
