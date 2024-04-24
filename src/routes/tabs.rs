@@ -1,6 +1,9 @@
 use crate::{
     db::tabs,
-    models::{NewTab, Session, Tab},
+    models::{
+        session::Session,
+        tab::{NewTab, Tab},
+    },
     types::{AppError, AppState, PaginatedResult, PaginationRequest},
 };
 use axum::{
@@ -61,7 +64,7 @@ mod tests {
     use super::*;
     use crate::{
         db::{sessions, test_util::bulk_create_tabs, users},
-        models::NewConfirmedUser,
+        models::user::NewConfirmedUser,
         routes::_test_utils::test_app,
         types::{test_pool_from_env, Claims},
     };

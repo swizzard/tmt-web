@@ -24,7 +24,7 @@ pub mod test_util {
     use super::*;
     use crate::{
         db::tabs,
-        models::{NewTab, Tab},
+        models::tab::{NewTab, Tab},
     };
     use fake::{Fake, Faker};
 

@@ -24,11 +24,11 @@ pub(crate) async fn authorize(
     let clid = payload.client_id.clone();
     let pwd_valid = validate_password(conn, clid, payload.client_secret).await?;
     if !pwd_valid {
-        return Err(AppError::BadRequest);
+        Err(AppError::BadRequest)
     } else {
         let session = new_session(st.pool(), payload.client_id).await?;
         let claims = Claims::from_session(&session);
-        let token = claims.to_token(&st.encoding())?;
+        let token = claims.to_token(st.encoding())?;
         let ab = AuthBody::new(token);
         tracing::warn!("authorize ab: {:?}", ab);
         Ok(Json(ab))
@@ -41,7 +41,7 @@ pub(crate) async fn logout(
 ) -> Result<Json<LogoutResult>, AppError> {
     let sess_id = claims.jti.clone();
     let conn = st.conn().await?;
-    let _ = delete_session(conn, claims.jti).await?;
+    delete_session(conn, claims.jti).await?;
     Ok(axum::Json(LogoutResult::new(sess_id)))
 }
 
@@ -53,13 +53,12 @@ mod test {
             sessions::{delete_user_sessions, get_session},
             users::{deconfirm_user, new_user_confirmed},
         },
-        models::NewConfirmedUser,
+        models::user::NewConfirmedUser,
         routes::_test_utils::test_app,
         types::test_pool_from_env,
     };
     use fake::{Fake, Faker};
     use http::StatusCode;
-    use serde_json::json;
 
     #[test_log::test(tokio::test)]
     async fn test_authorize_ok() -> anyhow::Result<()> {
@@ -80,18 +79,18 @@ mod test {
             client_id: user_email,
             client_secret: pwd,
         };
-        let resp = server.post(&"/authorize").json(&json!(login_data)).await;
+        let resp = server.post("/authorize").json(&login_data).await;
 
         // cleanup
         let c = pool.get().await?;
         let _ = deconfirm_user(c, uid.clone()).await?;
         let c = pool.get().await?;
-        let _ = delete_user_sessions(c, uid.clone()).await?;
+        delete_user_sessions(c, uid.clone()).await?;
 
         // assert
         resp.assert_status_ok();
         let resp_json = resp.json::<AuthBody>();
-        assert!(resp_json.access_token.len() > 0);
+        assert!(!resp_json.access_token.is_empty());
         assert_eq!(resp_json.token_type, String::from("Bearer"));
         Ok(())
     }
@@ -115,13 +114,13 @@ mod test {
             client_id: user_email,
             client_secret: bad_pass,
         };
-        let resp = server.post(&"/authorize").json(&json!(login_data)).await;
+        let resp = server.post("/authorize").json(&login_data).await;
 
         // cleanup
         let c = pool.get().await?;
-        let _ = deconfirm_user(c, uid.clone()).await?;
+        deconfirm_user(c, uid.clone()).await?;
         let c = pool.get().await?;
-        let _ = delete_user_sessions(c, uid.clone()).await?;
+        delete_user_sessions(c, uid.clone()).await?;
 
         // assert
         resp.assert_status(StatusCode::BAD_REQUEST);
@@ -147,12 +146,12 @@ mod test {
             client_secret: pwd,
         };
 
-        let resp = server.post(&"/authorize").json(&json!(login_data)).await;
+        let resp = server.post("/authorize").json(&login_data).await;
 
         let c = pool.get().await?;
         let _ = deconfirm_user(c, uid.clone()).await?;
         let c = pool.get().await?;
-        let _ = delete_user_sessions(c, uid.clone()).await?;
+        delete_user_sessions(c, uid.clone()).await?;
 
         // assert
         // TODO(SHR): fix this
@@ -178,7 +177,7 @@ mod test {
             client_secret: pwd,
         };
 
-        let resp = server.post(&"/authorize").json(&json!(login_data)).await;
+        let resp = server.post("/authorize").json(&login_data).await;
 
         // assert
         // TODO(SHR): fix this

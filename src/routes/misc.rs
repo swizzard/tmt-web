@@ -1,5 +1,5 @@
 use crate::{
-    models::Session,
+    models::session::Session,
     types::{AppError, AppState},
 };
 use axum::{routing::get, Router};
@@ -50,7 +50,7 @@ mod test {
                 sessions::{delete_session, new_session},
                 users::{deconfirm_user, new_user_confirmed},
             },
-            models::{NewConfirmedUser, NewUser},
+            models::user::{NewConfirmedUser, NewUser},
             types::{test_pool_from_env, Claims},
         };
         use http::header;

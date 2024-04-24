@@ -1,8 +1,11 @@
 use super::util::{err_is_not_found, get_conn};
 #[cfg(test)]
-use crate::models::{DeconfirmedUser, NewConfirmedUser};
+use crate::models::user::{DeconfirmedUser, NewConfirmedUser};
 use crate::{
-    models::{CreatedInvite, CreatedUser, Invite, InviteStatus, NewInvite, NewUser, User},
+    models::{
+        invite::{CreatedInvite, Invite, InviteStatus, NewInvite},
+        user::{CreatedUser, NewUser, User},
+    },
     schema::invites,
     schema::invites::dsl as invites_dsl,
     schema::users,

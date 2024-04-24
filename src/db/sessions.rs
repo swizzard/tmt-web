@@ -5,7 +5,7 @@ use tracing::error;
 
 use super::util::get_conn;
 use crate::{
-    models::{NewSession, Session},
+    models::session::{NewSession, Session},
     schema::{
         sessions::{self, dsl as sessions_dsl},
         users::dsl as users_dsl,
