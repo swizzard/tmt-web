@@ -949,7 +949,6 @@ mod tests {
         assert!(gotten_tags.is_empty());
         Ok(())
     }
-    #[ignore]
     #[test_log::test(tokio::test)]
     async fn test_user_tags_no_tags() -> anyhow::Result<()> {
         let pool = test_pool_from_env();
@@ -986,9 +985,41 @@ mod tests {
         assert!(gotten_tags.is_empty());
         Ok(())
     }
-    #[ignore]
     #[test_log::test(tokio::test)]
     async fn test_user_tags_wrong_user_id() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+        let c = pool.get().await?;
+        create_tags_reverse_alpha(c, user_id.clone()).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let pag_info = PaginationRequest {
+            page: Some(1),
+            page_size: Some(5),
+        };
+        let other_user_id = Faker.fake::<String>();
+        let resp = server
+            .get(&format!("/users/{}/tags", &other_user_id))
+            .add_query_params(pag_info)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        tags::delete_user_tags(c, user_id.clone()).await?;
+
+        resp.assert_status(StatusCode::FORBIDDEN);
         Ok(())
     }
 }
