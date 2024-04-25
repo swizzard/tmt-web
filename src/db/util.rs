@@ -69,4 +69,18 @@ pub mod test_util {
             .collect();
         tags::bulk_insert_tags(conn, tags).await
     }
+    pub async fn bulk_create_tags_from_strings(
+        conn: Connection,
+        user_id: String,
+        ts: Vec<String>,
+    ) -> Result<Vec<Tag>, AppError> {
+        let tags = ts
+            .into_iter()
+            .map(|t| NewTag {
+                user_id: user_id.clone(),
+                tag: t,
+            })
+            .collect();
+        tags::bulk_insert_tags(conn, tags).await
+    }
 }

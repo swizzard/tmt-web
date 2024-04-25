@@ -182,6 +182,11 @@ pub struct PaginatedResult<T> {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct MatchFragmentRequest {
+    pub fragment: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LogoutResult {
     pub session_id: String,
     pub ok: bool,

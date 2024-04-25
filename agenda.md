@@ -15,10 +15,10 @@
 - [x] add tag to tab
 - [x] remove tag from tab
 - [x] delete tag
-- [ ] list user tags
+- [x] list user tags
 
-  - [ ] pagination
-  - [ ] fuzzy matching?
+  - [x] pagination
+  - [x] fuzzy matching?
 
 - [ ] return tags with tab
 

@@ -3,9 +3,9 @@ use crate::{
     models::{
         session::Session,
         tab::{AttachTagRequest, DetachTagRequest, TagDetachedResponse},
-        tag::{NewTag, Tag},
+        tag::{MatchedTags, NewTag, Tag},
     },
-    types::{AppError, AppState, PaginatedResult, PaginationRequest},
+    types::{AppError, AppState, MatchFragmentRequest, PaginatedResult, PaginationRequest},
 };
 use axum::{
     extract::{Path, Query, State},
@@ -22,6 +22,7 @@ pub fn tags_router() -> Router<AppState> {
         .route("/tags", post(create))
         .route("/tags/:tag_id", delete(delete_tag))
         .route("/users/:user_id/tags", get(user_tags))
+        .route("/users/:user_id/tags/fuzzy", get(user_tags_fuzzy))
 }
 
 async fn create(
@@ -96,13 +97,33 @@ async fn user_tags(
     Ok(Json(tags::get_user_tags(conn, session.user_id, pr).await?))
 }
 
+async fn user_tags_fuzzy(
+    State(st): State<AppState>,
+    session: Session,
+    Path(user_id): Path<String>,
+    Query(MatchFragmentRequest { fragment }): Query<MatchFragmentRequest>,
+) -> Result<Json<MatchedTags>, AppError> {
+    if user_id != session.user_id {
+        return Err(AppError::WrongCredentials);
+    }
+    if fragment.len() < 3 || fragment.len() > 20 {
+        return Err(AppError::BadRequest);
+    }
+    let conn = st.conn().await?;
+    Ok(Json(MatchedTags::new(
+        tags::get_user_tags_fuzzy(conn, session.user_id, fragment).await?,
+    )))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
         db::{
             sessions, tabs,
-            test_util::{bulk_create_tags, create_tags_reverse_alpha},
+            test_util::{
+                bulk_create_tags, bulk_create_tags_from_strings, create_tags_reverse_alpha,
+            },
             users,
         },
         models::{tab::NewTab, user::NewConfirmedUser},
@@ -1020,6 +1041,177 @@ mod tests {
         tags::delete_user_tags(c, user_id.clone()).await?;
 
         resp.assert_status(StatusCode::FORBIDDEN);
+        Ok(())
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_fuzzy_ok() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+
+        let c = pool.get().await?;
+        let ts = vec![
+            "a bug".into(),
+            "a dog".into(),
+            "dog".into(),
+            "doggy".into(),
+            "dont".into(),
+        ];
+        bulk_create_tags_from_strings(c, user_id.clone(), ts).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let frag = MatchFragmentRequest {
+            fragment: "dog".to_string(),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags/fuzzy", &user_id))
+            .add_query_params(frag)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        tags::delete_user_tags(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let gotten_tags = resp.json::<MatchedTags>();
+        assert_eq!(gotten_tags.matches.len(), 3);
+
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_fuzzy_wrong_user_id() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+        let c = pool.get().await?;
+        create_tags_reverse_alpha(c, user_id.clone()).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let other_user_id = Faker.fake::<String>();
+        let frag = MatchFragmentRequest {
+            fragment: "a".to_string(),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags/fuzzy", &other_user_id))
+            .add_query_params(frag)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        tags::delete_user_tags(c, user_id.clone()).await?;
+
+        resp.assert_status(StatusCode::FORBIDDEN);
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_fuzzy_frag_too_short() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+
+        let c = pool.get().await?;
+        let ts = vec![
+            "a bug".into(),
+            "a dog".into(),
+            "dog".into(),
+            "doggy".into(),
+            "dont".into(),
+        ];
+        bulk_create_tags_from_strings(c, user_id.clone(), ts).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let frag = MatchFragmentRequest {
+            fragment: "d".to_string(),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags/fuzzy", &user_id))
+            .add_query_params(frag)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        tags::delete_user_tags(c, user_id.clone()).await?;
+
+        resp.assert_status(StatusCode::BAD_REQUEST);
+
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_fuzzy_frag_too_long() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+
+        let c = pool.get().await?;
+        let ts = vec![
+            "a bug".into(),
+            "a dog".into(),
+            "dog".into(),
+            "doggy".into(),
+            "dont".into(),
+        ];
+        bulk_create_tags_from_strings(c, user_id.clone(), ts).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let frag = MatchFragmentRequest {
+            fragment: "doyoubelievehowlongthisisthough".to_string(),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags/fuzzy", &user_id))
+            .add_query_params(frag)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        tags::delete_user_tags(c, user_id.clone()).await?;
+
+        resp.assert_status(StatusCode::BAD_REQUEST);
+
         Ok(())
     }
 }

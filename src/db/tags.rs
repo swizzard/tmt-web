@@ -209,6 +209,30 @@ pub async fn get_user_tags(
         has_more,
     })
 }
+
+pub async fn get_user_tags_fuzzy(
+    conn: Connection,
+    user_id: String,
+    to_match: String,
+) -> Result<Vec<Tag>, AppError> {
+    conn.interact(move |conn| {
+        tags_dsl::tags
+            .filter(tags_dsl::user_id.eq(user_id))
+            .filter(tags_dsl::tag.ilike(format!("%{}%", to_match)))
+            .order(tags_dsl::tag.asc())
+            .limit(10)
+            .get_results(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error getting user tags: {:?}", e);
+        AppError::DBError
+    })?
+    .map_err(|e| {
+        tracing::error!("error getting user tags: {:?}", e);
+        AppError::DBError
+    })
+}
 async fn tab_belongs(conn: Connection, tab_id: String, user_id: String) -> Result<bool, AppError> {
     conn.interact(move |conn| {
         diesel::select(exists(
