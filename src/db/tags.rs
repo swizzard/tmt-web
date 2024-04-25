@@ -6,8 +6,8 @@ use crate::{
     db::util::{err_is_not_found, get_conn},
     models::{
         tab::{
-            AttachTagRequest, CreatedTabTag, DetachTagRequest, NewTabTag, TagAttachedResponse,
-            TagDetachedResponse,
+            AttachTagRequest, CreatedTabTag, DetachTagRequest, NewTabTag, TabTag,
+            TagAttachedResponse, TagDetachedResponse,
         },
         tag::{NewTag, Tag},
     },
@@ -336,6 +336,28 @@ pub async fn mk_tab_tag(
             tracing::error!("error creating tab tag: {:?}", e);
             AppError::DBError
         }
+    })
+}
+
+#[cfg(test)]
+pub async fn bulk_mk_tab_tags(
+    conn: Connection,
+    data: Vec<NewTabTag>,
+) -> Result<Vec<TabTag>, AppError> {
+    conn.interact(|conn| {
+        diesel::insert_into(tabs_tags::table)
+            .values(data)
+            .returning(TabTag::as_returning())
+            .get_results(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error creating tab tags: {:?}", e);
+        AppError::DBError
+    })?
+    .map_err(|e| {
+        tracing::error!("error creating tab tags: {:?}", e);
+        AppError::DBError
     })
 }
 #[cfg(test)]

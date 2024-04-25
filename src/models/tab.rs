@@ -1,15 +1,28 @@
 use super::tag::Tag;
-use diesel::{deserialize::Queryable, Insertable, Selectable};
+use diesel::{
+    associations::Associations, deserialize::Queryable, Identifiable, Insertable, Selectable,
+};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Queryable, Selectable, Serialize, PartialEq)]
+#[derive(Debug, Identifiable, Deserialize, Queryable, Selectable, Serialize, PartialEq)]
 #[diesel(table_name = crate::schema::tabs)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
+#[cfg_attr(test, derive(Clone))]
 pub struct Tab {
     pub id: String,
     pub user_id: String,
     pub url: String,
     pub notes: Option<String>,
+}
+
+#[derive(Debug, Identifiable, Selectable, Queryable, Associations)]
+#[diesel(belongs_to(Tab))]
+#[diesel(belongs_to(Tag))]
+#[diesel(table_name = crate::schema::tabs_tags)]
+#[diesel(primary_key(tab_id, tag_id))]
+pub struct TabTag {
+    pub tab_id: String,
+    pub tag_id: String,
 }
 
 #[derive(Debug, Insertable, Deserialize, Serialize)]

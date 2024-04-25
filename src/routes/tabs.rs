@@ -2,7 +2,7 @@ use crate::{
     db::tabs,
     models::{
         session::Session,
-        tab::{NewTab, Tab},
+        tab::{NewTab, Tab, TabWithTags},
     },
     types::{AppError, AppState, PaginatedResult, PaginationRequest},
 };
@@ -18,6 +18,7 @@ pub fn tabs_router() -> Router<AppState> {
     Router::new()
         .route("/tabs", post(create))
         .route("/tabs/:tab_id", get(get_tab))
+        .route("/tabs/:tab_id/with-tags", get(get_tab_with_tags))
         .route("/users/:user_id/tabs", get(user_tabs))
 }
 
@@ -45,6 +46,16 @@ async fn get_tab(
     Ok(Json(tab))
 }
 
+async fn get_tab_with_tags(
+    State(st): State<AppState>,
+    session: Session,
+    Path(tab_id): Path<String>,
+) -> Result<Json<TabWithTags>, AppError> {
+    let p = st.pool();
+    let tab = tabs::get_tab_with_tags(p, session.user_id.clone(), tab_id).await?;
+    Ok(Json(tab))
+}
+
 async fn user_tabs(
     State(st): State<AppState>,
     session: Session,
@@ -63,8 +74,13 @@ async fn user_tabs(
 mod tests {
     use super::*;
     use crate::{
-        db::{sessions, test_util::bulk_create_tabs, users},
-        models::user::NewConfirmedUser,
+        db::{
+            sessions,
+            tags::bulk_mk_tab_tags,
+            test_util::{bulk_create_tabs, bulk_create_tags},
+            users,
+        },
+        models::{tag::Tag, user::NewConfirmedUser},
         routes::_test_utils::test_app,
         types::{test_pool_from_env, Claims},
     };
@@ -564,6 +580,64 @@ mod tests {
         let _ = users::deconfirm_user(c, user_id.clone()).await?;
 
         resp.assert_status(StatusCode::FORBIDDEN);
+        Ok(())
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_get_tab_with_tags_ok() -> anyhow::Result<()> {
+        use crate::models::tab::NewTabTag;
+        let pool = test_pool_from_env();
+        let server = test_app(tabs_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+
+        let c = pool.get().await?;
+        let tabs = bulk_create_tabs(c, user_id.clone(), 2).await?;
+        let tab = tabs.first().unwrap().clone();
+        let tab_id = tab.id.clone();
+
+        let c = pool.get().await?;
+        let tags = bulk_create_tags(c, user_id.clone(), 5).await?;
+        let to_attach_tags = tags.iter().take(3);
+        let ntt: Vec<NewTabTag> = to_attach_tags
+            .clone()
+            .map(|Tag { id, .. }| NewTabTag {
+                tab_id: tab_id.clone(),
+                tag_id: id.clone(),
+            })
+            .collect();
+
+        let c = pool.get().await?;
+        bulk_mk_tab_tags(c, ntt).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+
+        let resp = server
+            .get(&format!("/tabs/{}/with-tags", &tab_id))
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        tabs::delete_user_tabs(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let tab_with_tags = resp.json::<TabWithTags>();
+        assert_eq!(tab_with_tags.tab, tab);
+        assert_eq!(
+            tab_with_tags.tags,
+            to_attach_tags.cloned().collect::<Vec<_>>()
+        );
+
         Ok(())
     }
 }

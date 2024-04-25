@@ -21,6 +21,7 @@
   - [x] fuzzy matching?
 
 - [ ] return tags with tab
+- [ ] create tab with tags
 
 #### users
 
@@ -59,6 +60,7 @@ TK
 ## upcoming
 
 - [ ] forgotten/change password flow
+- [ ] tab `title: Option<String>`
 - [ ] search for tab
 - [ ] list tabs given tag
 

@@ -3,8 +3,15 @@ use diesel::prelude::*;
 
 use crate::{
     db::util::{err_is_not_found, get_conn},
-    models::tab::{NewTab, Tab},
-    schema::tabs::{self, dsl as tabs_dsl},
+    models::{
+        tab::{NewTab, Tab, TabTag, TabWithTags},
+        tag::Tag,
+    },
+    schema::{
+        tabs::{self, dsl as tabs_dsl},
+        tabs_tags::dsl as tt_dsl,
+        tags::dsl as tags_dsl,
+    },
     types::{AppError, PaginatedResult, PaginationRequest},
 };
 
@@ -51,6 +58,37 @@ pub async fn get_tab(conn: Connection, user_id: String, tab_id: String) -> Resul
             AppError::DBError
         }
     })
+}
+
+pub async fn get_tab_with_tags(
+    pool: Pool,
+    user_id: String,
+    tab_id: String,
+) -> Result<TabWithTags, AppError> {
+    let c = get_conn(pool.clone()).await?;
+    let tid = tab_id.clone();
+    let uid = user_id.clone();
+    let tab = get_tab(c, user_id.clone(), tab_id.clone()).await?;
+    let c = get_conn(pool.clone()).await?;
+    let tags = c
+        .interact(move |conn| {
+            tags_dsl::tags
+                .inner_join(tt_dsl::tabs_tags.on(tt_dsl::tag_id.eq(tags_dsl::id)))
+                .filter(tt_dsl::tab_id.eq(tid))
+                .filter(tags_dsl::user_id.eq(uid))
+                .select(Tag::as_select())
+                .get_results(conn)
+        })
+        .await
+        .map_err(|e| {
+            tracing::error!("error getting tab tags: {:?}", e);
+            AppError::DBError
+        })?
+        .map_err(|e| {
+            tracing::error!("error getting tab tags: {:?}", e);
+            AppError::DBError
+        })?;
+    Ok(TabWithTags { tab, tags })
 }
 
 pub async fn get_user_tabs(
