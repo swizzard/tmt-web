@@ -1,5 +1,6 @@
 pub(crate) mod sessions;
 pub(crate) mod tabs;
+pub(crate) mod tags;
 pub(crate) mod users;
 mod util;
 use deadpool_diesel::postgres::Connection;

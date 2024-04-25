@@ -101,9 +101,9 @@ mod tests {
             .await;
 
         let c = pool.get().await?;
-        let _ = tabs::delete_user_tabs(c, user_id.clone()).await?;
+        tabs::delete_user_tabs(c, user_id.clone()).await?;
         let c = pool.get().await?;
-        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
 
         resp.assert_status(StatusCode::CREATED);
         let tab = resp.json::<Tab>();

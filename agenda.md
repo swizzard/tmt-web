@@ -11,10 +11,10 @@
 
 #### tags
 
-- [ ] create tag
-- [ ] add tag to tab
-- [ ] remove tag from tab
-- [ ] delete tag
+- [x] create tag
+- [x] add tag to tab
+- [x] remove tag from tab
+- [x] delete tag
 - [ ] list user tags
 
   - [ ] pagination
@@ -61,3 +61,7 @@ TK
 - [ ] forgotten/change password flow
 - [ ] search for tab
 - [ ] list tabs given tag
+
+## other
+
+- [ ] deletes returning 0 should throw NotFound instead?

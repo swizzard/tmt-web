@@ -39,8 +39,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    tabs_tags (ix) {
-        ix -> Int8,
+    tabs_tags (tab_id, tag_id) {
         tab_id -> Text,
         tag_id -> Text,
     }
