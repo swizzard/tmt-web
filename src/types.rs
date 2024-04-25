@@ -163,6 +163,18 @@ pub struct PaginationRequest {
     pub page_size: Option<i64>,
 }
 
+impl PaginationRequest {
+    pub fn limit(&self) -> i64 {
+        self.page_size.unwrap_or(25)
+    }
+    pub fn page(&self) -> i64 {
+        self.page.unwrap_or(1)
+    }
+    pub fn offset(&self) -> i64 {
+        (self.page() - 1) * self.limit()
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PaginatedResult<T> {
     pub results: Vec<T>,

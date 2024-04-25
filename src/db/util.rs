@@ -24,7 +24,9 @@ pub mod test_util {
     use super::*;
     use crate::{
         db::tabs,
+        db::tags,
         models::tab::{NewTab, Tab},
+        models::tag::{NewTag, Tag},
     };
     use fake::{Fake, Faker};
 
@@ -40,5 +42,31 @@ pub mod test_util {
             tabs.push(t);
         }
         tabs::bulk_insert_tabs(conn, tabs).await
+    }
+    pub async fn bulk_create_tags(
+        conn: Connection,
+        user_id: String,
+        n_tags: usize,
+    ) -> Result<Vec<Tag>, AppError> {
+        let mut tags = Vec::with_capacity(n_tags);
+        for _ in 0..n_tags {
+            let mut t = Faker.fake::<NewTag>();
+            t.user_id.clone_from(&user_id);
+            tags.push(t);
+        }
+        tags::bulk_insert_tags(conn, tags).await
+    }
+    pub async fn create_tags_reverse_alpha(
+        conn: Connection,
+        user_id: String,
+    ) -> Result<Vec<Tag>, AppError> {
+        let tags = ('a'..='z')
+            .rev()
+            .map(|c| NewTag {
+                user_id: user_id.clone(),
+                tag: c.to_string(),
+            })
+            .collect();
+        tags::bulk_insert_tags(conn, tags).await
     }
 }

@@ -16,7 +16,7 @@ use crate::{
         tabs_tags::{self, dsl as tt_dsl},
         tags::{self, dsl as tags_dsl},
     },
-    types::{AppError, PaginatedResult},
+    types::{AppError, PaginatedResult, PaginationRequest},
 };
 
 pub async fn new_tag(conn: Connection, data: NewTag) -> Result<Tag, AppError> {
@@ -62,34 +62,6 @@ pub async fn delete_tag(
     .map_err(|e| {
         tracing::error!("error deleting tag: {:?}", e);
         AppError::DBError
-    })
-}
-
-#[cfg(test)]
-pub async fn mk_tab_tag(
-    conn: Connection,
-    tab_id: String,
-    tag_id: String,
-) -> Result<CreatedTabTag, AppError> {
-    let ntt = NewTabTag { tab_id, tag_id };
-    conn.interact(move |conn| {
-        diesel::insert_into(tabs_tags::table)
-            .values(ntt)
-            .returning(CreatedTabTag::as_returning())
-            .get_result(conn)
-    })
-    .await
-    .map_err(|e| {
-        tracing::error!("error creating tab tag: {:?}", e);
-        AppError::DBError
-    })?
-    .map_err(|e| {
-        if err_is_not_found(&e) {
-            AppError::NotFound
-        } else {
-            tracing::error!("error creating tab tag: {:?}", e);
-            AppError::DBError
-        }
     })
 }
 
@@ -185,33 +157,58 @@ pub async fn detach_tag(
         Err(AppError::WrongCredentials)
     }
 }
-#[cfg(test)]
-pub async fn get_tab_tag(
+
+pub async fn get_user_tags(
     conn: Connection,
-    tab_id: String,
-    tag_id: String,
-) -> Result<CreatedTabTag, AppError> {
-    conn.interact(move |conn| {
-        tabs_tags::table
-            .filter(tabs_tags::tab_id.eq(tab_id))
-            .filter(tabs_tags::tag_id.eq(tag_id))
-            .get_result(conn)
-    })
-    .await
-    .map_err(|e| {
-        tracing::error!("error getting tab tag: {:?}", e);
-        AppError::DBError
-    })?
-    .map_err(|e| {
-        if err_is_not_found(&e) {
-            AppError::NotFound
-        } else {
-            tracing::error!("error getting tab tag: {:?}", e);
+    user_id: String,
+    pr: PaginationRequest,
+) -> Result<PaginatedResult<Tag>, AppError> {
+    let offset = pr.offset();
+    let limit = pr.limit();
+    let uid = user_id.clone();
+
+    let cuid = uid.clone();
+    let count: i64 = conn
+        .interact(move |conn| {
+            tags_dsl::tags
+                .filter(tags_dsl::user_id.eq(cuid))
+                .count()
+                .get_result(conn)
+        })
+        .await
+        .map_err(|e| {
+            tracing::error!("error getting user tags count: {:?}", e);
             AppError::DBError
-        }
+        })?
+        .map_err(|e| {
+            tracing::error!("error getting user tags count: {:?}", e);
+            AppError::DBError
+        })?;
+    let has_more = count - offset > limit;
+    let tuid = uid.clone();
+    let tags = conn
+        .interact(move |conn| {
+            tags_dsl::tags
+                .filter(tags_dsl::user_id.eq(tuid))
+                .order(tags_dsl::tag.desc())
+                .limit(limit)
+                .offset(offset)
+                .get_results(conn)
+        })
+        .await
+        .map_err(|e| {
+            tracing::error!("error getting user tags: {:?}", e);
+            AppError::DBError
+        })?
+        .map_err(|e| {
+            tracing::error!("error getting user tags: {:?}", e);
+            AppError::DBError
+        })?;
+    Ok(PaginatedResult {
+        results: tags,
+        has_more,
     })
 }
-
 async fn tab_belongs(conn: Connection, tab_id: String, user_id: String) -> Result<bool, AppError> {
     conn.interact(move |conn| {
         diesel::select(exists(
@@ -287,5 +284,77 @@ pub async fn get_tag(conn: Connection, tag_id: String) -> Result<Tag, AppError> 
             tracing::error!("error getting tag: {:?}", e);
             AppError::DBError
         }
+    })
+}
+
+#[cfg(test)]
+pub async fn mk_tab_tag(
+    conn: Connection,
+    tab_id: String,
+    tag_id: String,
+) -> Result<CreatedTabTag, AppError> {
+    let ntt = NewTabTag { tab_id, tag_id };
+    conn.interact(move |conn| {
+        diesel::insert_into(tabs_tags::table)
+            .values(ntt)
+            .returning(CreatedTabTag::as_returning())
+            .get_result(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error creating tab tag: {:?}", e);
+        AppError::DBError
+    })?
+    .map_err(|e| {
+        if err_is_not_found(&e) {
+            AppError::NotFound
+        } else {
+            tracing::error!("error creating tab tag: {:?}", e);
+            AppError::DBError
+        }
+    })
+}
+#[cfg(test)]
+pub async fn get_tab_tag(
+    conn: Connection,
+    tab_id: String,
+    tag_id: String,
+) -> Result<CreatedTabTag, AppError> {
+    conn.interact(move |conn| {
+        tabs_tags::table
+            .filter(tabs_tags::tab_id.eq(tab_id))
+            .filter(tabs_tags::tag_id.eq(tag_id))
+            .get_result(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error getting tab tag: {:?}", e);
+        AppError::DBError
+    })?
+    .map_err(|e| {
+        if err_is_not_found(&e) {
+            AppError::NotFound
+        } else {
+            tracing::error!("error getting tab tag: {:?}", e);
+            AppError::DBError
+        }
+    })
+}
+#[cfg(test)] // for now
+pub async fn bulk_insert_tags(conn: Connection, data: Vec<NewTag>) -> Result<Vec<Tag>, AppError> {
+    conn.interact(|conn| {
+        diesel::insert_into(tags::table)
+            .values(data)
+            .returning(Tag::as_returning())
+            .get_results(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error bulk inserting tags: {:?}", e);
+        AppError::DBError
+    })?
+    .map_err(|e| {
+        tracing::error!("error bulk inserting tags: {:?}", e);
+        AppError::DBError
     })
 }

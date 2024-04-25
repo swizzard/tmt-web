@@ -49,13 +49,13 @@ async fn user_tabs(
     State(st): State<AppState>,
     session: Session,
     Path(user_id): Path<String>,
-    Query(PaginationRequest { page, page_size }): Query<PaginationRequest>,
+    Query(pr): Query<PaginationRequest>,
 ) -> Result<Json<PaginatedResult<Tab>>, AppError> {
     if user_id != session.user_id {
         return Err(AppError::WrongCredentials);
     }
     let pool = st.pool();
-    let tabs = tabs::get_user_tabs(pool, session.user_id.clone(), page, page_size).await?;
+    let tabs = tabs::get_user_tabs(pool, session.user_id.clone(), pr).await?;
     Ok(Json(tabs))
 }
 

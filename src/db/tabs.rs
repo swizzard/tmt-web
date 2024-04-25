@@ -4,9 +4,8 @@ use diesel::prelude::*;
 use crate::{
     db::util::{err_is_not_found, get_conn},
     models::tab::{NewTab, Tab},
-    schema::tabs,
-    schema::tabs::dsl as tabs_dsl,
-    types::{AppError, PaginatedResult},
+    schema::tabs::{self, dsl as tabs_dsl},
+    types::{AppError, PaginatedResult, PaginationRequest},
 };
 
 pub async fn new_tab(conn: Connection, data: NewTab) -> Result<Tab, AppError> {
@@ -57,12 +56,10 @@ pub async fn get_tab(conn: Connection, user_id: String, tab_id: String) -> Resul
 pub async fn get_user_tabs(
     pool: Pool,
     user_id: String,
-    page: Option<i64>,
-    page_size: Option<i64>,
+    pr: PaginationRequest,
 ) -> Result<PaginatedResult<Tab>, AppError> {
-    let limit = page_size.unwrap_or(25);
-    let page = page.unwrap_or(1);
-    let offset = (page - 1) * limit;
+    let offset = pr.offset();
+    let limit = pr.limit();
 
     let c = get_conn(pool).await?;
     let count_q = tabs_dsl::tabs.filter(tabs_dsl::user_id.eq(user_id.clone()));

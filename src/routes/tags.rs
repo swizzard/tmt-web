@@ -17,10 +17,11 @@ use axum::{
 
 pub fn tags_router() -> Router<AppState> {
     Router::new()
-        .route("/tags", post(create))
-        .route("/tags/:tag_id", delete(delete_tag))
         .route("/tabs/:tab_id/tags", post(attach))
         .route("/tabs/:tab_id/tags/:tag_id", delete(detach))
+        .route("/tags", post(create))
+        .route("/tags/:tag_id", delete(delete_tag))
+        .route("/users/:user_id/tags", get(user_tags))
 }
 
 async fn create(
@@ -82,11 +83,28 @@ async fn delete_tag(
     Ok(StatusCode::OK)
 }
 
+async fn user_tags(
+    State(st): State<AppState>,
+    session: Session,
+    Path(user_id): Path<String>,
+    Query(pr): Query<PaginationRequest>,
+) -> Result<Json<PaginatedResult<Tag>>, AppError> {
+    if user_id != session.user_id {
+        return Err(AppError::WrongCredentials);
+    }
+    let conn = st.conn().await?;
+    Ok(Json(tags::get_user_tags(conn, session.user_id, pr).await?))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        db::{sessions, tabs, users},
+        db::{
+            sessions, tabs,
+            test_util::{bulk_create_tags, create_tags_reverse_alpha},
+            users,
+        },
         models::{tab::NewTab, user::NewConfirmedUser},
         routes::_test_utils::test_app,
         types::{test_pool_from_env, Claims},
@@ -765,6 +783,212 @@ mod tests {
         tags::delete_tag(c, other_user_id.clone(), tag.id.clone()).await?;
 
         resp.assert_status_ok();
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_ok() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+        let c = pool.get().await?;
+        bulk_create_tags(c, user_id.clone(), 5).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let pag_info = PaginationRequest {
+            page: Some(1),
+            page_size: Some(5),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags", &user_id))
+            .add_query_params(pag_info)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = tags::delete_user_tags(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let paginated_tags = resp.json::<PaginatedResult<Tag>>();
+        assert!(!paginated_tags.has_more);
+        let gotten_tags = paginated_tags.results;
+        assert_eq!(gotten_tags.len(), 5);
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_pagination_more() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+        let c = pool.get().await?;
+        let tags = create_tags_reverse_alpha(c, user_id.clone()).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let pag_info = PaginationRequest {
+            page: Some(1),
+            page_size: Some(5),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags", &user_id))
+            .add_query_params(pag_info)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = tags::delete_user_tags(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let paginated_tags = resp.json::<PaginatedResult<Tag>>();
+        println!("paginated_tags {:?}", paginated_tags);
+        assert!(paginated_tags.has_more);
+        let expected_tags = tags.into_iter().take(5).collect::<Vec<Tag>>();
+        let gotten_tags = paginated_tags.results;
+        assert_eq!(gotten_tags, expected_tags);
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_pagination_no_more() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+        let c = pool.get().await?;
+        let tags = create_tags_reverse_alpha(c, user_id.clone()).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let pag_info = PaginationRequest {
+            page: Some(6),
+            page_size: Some(5),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags", &user_id))
+            .add_query_params(pag_info)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = tags::delete_user_tags(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let paginated_tags = resp.json::<PaginatedResult<Tag>>();
+        println!("paginated_tags {:?}", paginated_tags);
+        assert!(!paginated_tags.has_more);
+        let expected_tags = tags.into_iter().skip(25).take(5).collect::<Vec<Tag>>();
+        let gotten_tags = paginated_tags.results;
+        assert_eq!(gotten_tags, expected_tags);
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_pagination_past_end() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+        let c = pool.get().await?;
+        create_tags_reverse_alpha(c, user_id.clone()).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let pag_info = PaginationRequest {
+            page: Some(7),
+            page_size: Some(5),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags", &user_id))
+            .add_query_params(pag_info)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = tags::delete_user_tags(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let paginated_tags = resp.json::<PaginatedResult<Tag>>();
+        assert!(!paginated_tags.has_more);
+        let gotten_tags = paginated_tags.results;
+        assert!(gotten_tags.is_empty());
+        Ok(())
+    }
+    #[ignore]
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_no_tags() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tags_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let pag_info = PaginationRequest {
+            page: Some(1),
+            page_size: Some(5),
+        };
+        let resp = server
+            .get(&format!("/users/{}/tags", &user_id))
+            .add_query_params(pag_info)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _ = users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let paginated_tags = resp.json::<PaginatedResult<Tag>>();
+        assert!(!paginated_tags.has_more);
+        let gotten_tags = paginated_tags.results;
+        assert!(gotten_tags.is_empty());
+        Ok(())
+    }
+    #[ignore]
+    #[test_log::test(tokio::test)]
+    async fn test_user_tags_wrong_user_id() -> anyhow::Result<()> {
         Ok(())
     }
 }
