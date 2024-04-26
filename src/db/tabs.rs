@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use crate::{
     db::util::{err_is_not_found, get_conn},
     models::{
-        tab::{NewTab, Tab, TabTag, TabWithTags},
+        tab::{NewTab, Tab, TabWithTags},
         tag::Tag,
     },
     schema::{

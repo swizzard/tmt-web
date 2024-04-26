@@ -20,7 +20,7 @@
   - [x] pagination
   - [x] fuzzy matching?
 
-- [ ] return tags with tab
+- [x] return tags with tab
 - [ ] create tab with tags
 
 #### users

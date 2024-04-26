@@ -1,4 +1,4 @@
-use super::tag::Tag;
+use super::tag::{MaybeNewTag, Tag};
 use diesel::{
     associations::Associations, deserialize::Queryable, Identifiable, Insertable, Selectable,
 };
@@ -79,4 +79,10 @@ pub struct TagDetachedResponse {
     pub user_id: String,
     pub tab_id: String,
     pub tag_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct NewTabWithTags {
+    pub tab: NewTab,
+    pub tags: Vec<MaybeNewTag>,
 }

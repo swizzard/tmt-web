@@ -1,8 +1,9 @@
 use crate::{
-    db::tabs,
+    db::{tabs, tags},
     models::{
         session::Session,
-        tab::{NewTab, Tab, TabWithTags},
+        tab::{NewTab, NewTabTag, NewTabWithTags, Tab, TabWithTags},
+        tag::{NewTag, Tag},
     },
     types::{AppError, AppState, PaginatedResult, PaginationRequest},
 };
@@ -17,6 +18,7 @@ use axum::{
 pub fn tabs_router() -> Router<AppState> {
     Router::new()
         .route("/tabs", post(create))
+        .route("/tabs/with-tags", post(create_with_tags))
         .route("/tabs/:tab_id", get(get_tab))
         .route("/tabs/:tab_id/with-tags", get(get_tab_with_tags))
         .route("/users/:user_id/tabs", get(user_tabs))
@@ -34,6 +36,57 @@ async fn create(
         let tab = tabs::new_tab(conn, payload).await?;
         Ok((StatusCode::CREATED, Json(tab)))
     }
+}
+
+async fn create_with_tags(
+    State(st): State<AppState>,
+    session: Session,
+    Json(payload): Json<NewTabWithTags>,
+) -> Result<impl IntoResponse, AppError> {
+    if payload.tab.user_id != session.user_id {
+        return Err(AppError::WrongCredentials);
+    }
+    let conn = st.conn().await?;
+    let tab = tabs::new_tab(conn, payload.tab).await?;
+    let tab_id = tab.id.clone();
+    let tags = payload.tags;
+    let mut new: Vec<NewTag> = Vec::with_capacity(tags.len());
+    let mut to_insert: Vec<NewTabTag> = Vec::with_capacity(tags.len());
+    let mut tags_to_return: Vec<Tag> = Vec::with_capacity(tags.len());
+    for tag in tags {
+        if let Some(gid) = tag.id {
+            to_insert.push(NewTabTag {
+                tab_id: tab_id.clone(),
+                tag_id: gid.clone(),
+            });
+            tags_to_return.push(Tag {
+                id: gid,
+                user_id: session.user_id.clone(),
+                tag: tag.tag,
+            })
+        } else {
+            new.push(NewTag {
+                user_id: tag.user_id,
+                tag: tag.tag,
+            });
+        }
+    }
+    let conn = st.conn().await?;
+    let new_tags = tags::bulk_insert_tags(conn, new).await?;
+    for tag in new_tags {
+        to_insert.push(NewTabTag {
+            tab_id: tab_id.clone(),
+            tag_id: tag.id.clone(),
+        });
+        tags_to_return.push(tag);
+    }
+    let conn = st.conn().await?;
+    tags::bulk_mk_tab_tags(conn, to_insert).await?;
+    let tab_with_tags = TabWithTags {
+        tab,
+        tags: tags_to_return,
+    };
+    Ok((StatusCode::CREATED, Json(tab_with_tags)))
 }
 
 async fn get_tab(
@@ -80,7 +133,7 @@ mod tests {
             test_util::{bulk_create_tabs, bulk_create_tags},
             users,
         },
-        models::{tag::Tag, user::NewConfirmedUser},
+        models::{tag::MaybeNewTag, user::NewConfirmedUser},
         routes::_test_utils::test_app,
         types::{test_pool_from_env, Claims},
     };
@@ -638,6 +691,76 @@ mod tests {
             to_attach_tags.cloned().collect::<Vec<_>>()
         );
 
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_create_with_tags_ok() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tabs_router())?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let user_email = user.email.clone();
+
+        let c = pool.get().await?;
+        let tags = bulk_create_tags(c, user_id.clone(), 5).await?;
+
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+
+        let mut tags_data: Vec<MaybeNewTag> = tags
+            .into_iter()
+            .take(3)
+            .map(|Tag { id, tag, .. }| MaybeNewTag {
+                id: Some(id.clone()),
+                user_id: user_id.clone(),
+                tag: tag.clone(),
+            })
+            .collect();
+        tags_data.push(MaybeNewTag {
+            id: None,
+            user_id: user_id.clone(),
+            tag: Faker.fake::<String>(),
+        });
+        tags_data.push(MaybeNewTag {
+            id: None,
+            user_id: user_id.clone(),
+            tag: Faker.fake::<String>(),
+        });
+
+        let url = String::from("https://example.com");
+        let notes: Option<String> = Some("notes".into());
+        let tab_data = NewTabWithTags {
+            tab: NewTab {
+                user_id: user_id.clone(),
+                url: url.clone(),
+                notes: notes.clone(),
+            },
+            tags: tags_data,
+        };
+
+        let resp = server
+            .post("/tabs/with-tags")
+            .json(&tab_data)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        tabs::delete_user_tabs(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status(StatusCode::CREATED);
+        let tab_with_tags = resp.json::<TabWithTags>();
+        assert_eq!(tab_with_tags.tab.user_id, user_id);
+        assert_eq!(tab_with_tags.tab.url, url);
+        assert_eq!(tab_with_tags.tab.notes, notes);
+        assert_eq!(tab_with_tags.tags.len(), 5);
         Ok(())
     }
 }

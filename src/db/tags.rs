@@ -339,7 +339,6 @@ pub async fn mk_tab_tag(
     })
 }
 
-#[cfg(test)]
 pub async fn bulk_mk_tab_tags(
     conn: Connection,
     data: Vec<NewTabTag>,
@@ -386,7 +385,6 @@ pub async fn get_tab_tag(
         }
     })
 }
-#[cfg(test)] // for now
 pub async fn bulk_insert_tags(conn: Connection, data: Vec<NewTag>) -> Result<Vec<Tag>, AppError> {
     conn.interact(|conn| {
         diesel::insert_into(tags::table)

@@ -29,3 +29,10 @@ impl MatchedTags {
         Self { matches }
     }
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MaybeNewTag {
+    pub id: Option<String>,
+    pub user_id: String,
+    pub tag: String,
+}
