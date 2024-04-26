@@ -67,7 +67,6 @@ pub async fn update_invite(
 ) -> Result<Json<Invite>, AppError> {
     let conn = st.conn().await?;
     let inv = users::update_invite_status(conn, invite_id, status).await?;
-    println!("new status: {:?}", inv.status);
     Ok(Json(inv))
 }
 
