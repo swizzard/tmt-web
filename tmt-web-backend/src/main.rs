@@ -1,6 +1,6 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use tmt_web::{make_app, AppState};
+use tmt_web_backend::{make_app, AppState};
 
 #[tokio::main]
 async fn main() {
