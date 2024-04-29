@@ -21,9 +21,11 @@
   - [x] fuzzy matching?
 
 - [x] return tags with tab
-- [ ] create tab with tags
+- [x] create tab with tags
 
 #### users
+
+- [ ] confirm user via `GET` + query param, redirect?
 
 TK
 
@@ -63,6 +65,7 @@ TK
 - [ ] tab `title: Option<String>`
 - [ ] search for tab
 - [ ] list tabs given tag
+- [ ] renew session token
 
 ## other
 
