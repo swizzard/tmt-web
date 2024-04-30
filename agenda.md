@@ -8,6 +8,9 @@
 
 - [x] all user tabs
   - [x] pagination
+- [ ] edit tab
+  - top-level fields
+  - add/remove/create tags
 
 #### tags
 
