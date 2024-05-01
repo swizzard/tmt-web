@@ -1,16 +1,22 @@
 use crate::{
     db::{
-        sessions::{delete_session, new_session},
+        sessions::{delete_session, new_session, renew_session},
         validate_password,
     },
+    models::session::Session,
     types::{AppError, AppState, AuthBody, AuthPayload, Claims, LogoutResult},
 };
-use axum::{extract::State, routing::post, Json, Router};
+use axum::{
+    extract::State,
+    routing::{get, post},
+    Json, Router,
+};
 
 pub fn auth_router() -> Router<AppState> {
     Router::new()
         .route("/authorize", post(authorize))
         .route("/logout", post(logout))
+        .route("/renew", get(renew))
 }
 
 pub(crate) async fn authorize(
@@ -44,6 +50,18 @@ pub(crate) async fn logout(
     let conn = st.conn().await?;
     delete_session(conn, claims.jti).await?;
     Ok(axum::Json(LogoutResult::new(sess_id)))
+}
+
+pub(crate) async fn renew(
+    State(st): State<AppState>,
+    session: Session,
+) -> Result<Json<AuthBody>, AppError> {
+    let conn = st.conn().await?;
+    let new_sess = renew_session(conn, session.id).await?;
+    let claims = Claims::from_session(&new_sess);
+    let token = claims.into_token(st.encoding())?;
+    let ab = AuthBody::new(token);
+    Ok(Json(ab))
 }
 
 #[cfg(test)]
@@ -227,6 +245,45 @@ mod test {
         let s = get_session(c, sid.clone()).await?;
         assert!(s.is_none());
         resp.assert_status_ok();
+
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_renew_ok() -> anyhow::Result<()> {
+        use http::header;
+        let server = test_app(auth_router())?;
+        let pool = test_pool_from_env();
+
+        // create user
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = new_user_confirmed(c, user_data).await?;
+        let user_email = user.email.clone();
+        let uid = user.id.clone();
+        let p = pool.clone();
+        let session = new_session(p, user_email.clone()).await?;
+        let sid = session.id.clone();
+        let exp = session.expires;
+        let token = Claims::from_session(&session).test_to_token()?;
+
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+
+        let resp = server
+            .get("/renew")
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        let _d = deconfirm_user(c, uid).await?;
+
+        let c = pool.get().await?;
+        let s = get_session(c, sid.clone()).await?.unwrap();
+        assert!(s.expires > exp);
+        let ab = resp.json::<AuthBody>();
+        assert!(!ab.access_token.is_empty());
 
         Ok(())
     }

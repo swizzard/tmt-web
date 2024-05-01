@@ -75,6 +75,24 @@ pub async fn new_session(pool: Pool, user_email: String) -> Result<Session, AppE
     }
 }
 
+pub async fn renew_session(conn: Connection, session_id: String) -> Result<Session, AppError> {
+    conn.interact(|conn| {
+        diesel::update(sessions_dsl::sessions.filter(sessions_dsl::id.eq(session_id)))
+            .set(sessions_dsl::expires.eq(Utc::now().naive_utc() + chrono::Duration::minutes(30)))
+            .returning(Session::as_returning())
+            .get_result(conn)
+            .map_err(|e| {
+                error!("error renewing session: {:?}", e);
+                AppError::DBError
+            })
+    })
+    .await
+    .map_err(|e| {
+        error!("error renewing session: {:?}", e);
+        AppError::DBError
+    })?
+}
+
 pub async fn delete_session(conn: Connection, session_id: String) -> Result<(), AppError> {
     use crate::schema::sessions::dsl::*;
     let _ = conn
