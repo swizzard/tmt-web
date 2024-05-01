@@ -114,6 +114,7 @@ async fn user_tabs(
     session: Session,
     Query(pr): Query<PaginationRequest>,
 ) -> Result<Json<PaginatedResult<Tab>>, AppError> {
+    tracing::info!("getting tabs for user {} {:?}", session.user_id, pr);
     let pool = st.pool();
     let tabs = tabs::get_user_tabs(pool, session.user_id.clone(), pr).await?;
     Ok(Json(tabs))

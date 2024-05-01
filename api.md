@@ -113,7 +113,7 @@
       }[]
     }
     ```
-- `GET /users/:user_id/tabs`
+- `GET /users/tabs`
   - request:  
     optional query parameters:
     - `page`: number

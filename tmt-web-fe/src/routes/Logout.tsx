@@ -1,34 +1,35 @@
 import { useState } from "react";
-import { logout } from "./api";
+import { useNavigate } from "react-router-dom";
+import { logout } from "../api";
 
 export interface LogoutProps {
   setAuthToken: (authToken: string | undefined) => void;
   authToken: string | undefined;
 }
 export default function Logout({ authToken, setAuthToken }: LogoutProps) {
-  const [err, setErr] = useState<string | undefined>(undefined);
+  const navigate = useNavigate();
   const onClick = async () => {
     if (!authToken) {
-      setErr("already logged out");
+      console.log("already logged out");
+      navigate("/", { state: { authToken: undefined } });
     } else {
       try {
         const resp = await logout({ authToken: authToken!, data: {} });
         if (resp.ok) {
           console.log("logged out");
-          setAuthToken(undefined);
         } else {
           console.log("logout error, logging out anyway");
-          setAuthToken(undefined);
         }
+        setAuthToken(undefined);
+        navigate("/", { state: { authToken: undefined } });
       } catch (e: any) {
-        setErr(e.message ?? JSON.stringify(e));
+        console.error(e);
       }
     }
   };
 
   return (
     <div className="Logout">
-      {err && <div className="err">{err}</div>}
       <button type="button" onClick={onClick}>
         Logout
       </button>

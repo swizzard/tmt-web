@@ -1,19 +1,19 @@
 # FE
 
-- [ ] form library
+- [x] form library
 
 ## Users
 
 - login
-  - [ ] form
-  - [ ] email
-  - [ ] password
-  - [ ] api request
-  - [ ] persist token
+  - [x] form
+  - [x] email
+  - [x] password
+  - [x] api request
+  - [x] persist token
 - logout
-- [ ] api request
-- [ ] remove token from state
-- [ ] redirect to login
+- [x] api request
+- [x] remove token from state
+- [x] redirect to login
 - signup
 - [ ] form
   - [ ] email

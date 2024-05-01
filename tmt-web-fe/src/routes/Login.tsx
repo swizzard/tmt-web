@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { authorize, LoginInput } from "./api";
+import { authorize, LoginInput } from "../api";
 
 export interface LoginProps {
   setAuthToken: (authToken: string | undefined) => void;
@@ -13,19 +14,21 @@ export default function Login({ setAuthToken }: LoginProps) {
     watch,
     formState: { errors },
   } = useForm<LoginInput>();
+  const navigate = useNavigate();
   const w = watch();
   const [err, setErr] = useState<string | undefined>();
   const onSubmit: SubmitHandler<LoginInput> = async (data) => {
     try {
       const { access_token } = await authorize(data);
       setAuthToken(access_token);
+      navigate("/tabs", { state: { authToken: access_token } });
     } catch (e: any) {
       setErr(e.message ?? JSON.stringify(e));
       reset();
     }
   };
   useEffect(() => {
-    console.log(errors);
+    console.log("errors:", errors);
   }, [errors]);
 
   useEffect(() => {

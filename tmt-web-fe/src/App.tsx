@@ -1,24 +1,14 @@
 import React, { useEffect, useState } from "react";
+import { RouterProvider } from "react-router-dom";
+import router from "./Router";
 import "./App.css";
-import Login from "./Login";
-import Logout from "./Logout";
 
 function App() {
-  const [authToken, setAuthToken] = useState<string | undefined>();
-
+  const [authToken, setAuthToken] = useState<string | undefined>(undefined);
   useEffect(() => {
-    console.log(` App got authToken: ${authToken}`);
+    console.log("authToken:", authToken);
   }, [authToken]);
-
-  return (
-    <div className="App">
-      {authToken ? (
-        <Logout authToken={authToken} setAuthToken={setAuthToken} />
-      ) : (
-        <Login setAuthToken={setAuthToken} />
-      )}
-    </div>
-  );
+  return <RouterProvider router={router({ authToken, setAuthToken })} />;
 }
 
 export default App;
