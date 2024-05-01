@@ -5,9 +5,8 @@ mod routes;
 mod schema;
 mod types;
 
-use axum::http::Method;
 use axum::Router;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 
 use routes::{
     auth::auth_router, misc::misc_router, tabs::tabs_router, tags::tags_router, users::users_router,

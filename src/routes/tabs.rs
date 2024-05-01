@@ -21,7 +21,7 @@ pub fn tabs_router() -> Router<AppState> {
         .route("/tabs/with-tags", post(create_with_tags))
         .route("/tabs/:tab_id", get(get_tab))
         .route("/tabs/:tab_id/with-tags", get(get_tab_with_tags))
-        .route("/users/:user_id/tabs", get(user_tabs))
+        .route("/users/tabs", get(user_tabs))
 }
 
 async fn create(
@@ -112,12 +112,8 @@ async fn get_tab_with_tags(
 async fn user_tabs(
     State(st): State<AppState>,
     session: Session,
-    Path(user_id): Path<String>,
     Query(pr): Query<PaginationRequest>,
 ) -> Result<Json<PaginatedResult<Tab>>, AppError> {
-    if user_id != session.user_id {
-        return Err(AppError::WrongCredentials);
-    }
     let pool = st.pool();
     let tabs = tabs::get_user_tabs(pool, session.user_id.clone(), pr).await?;
     Ok(Json(tabs))
@@ -380,7 +376,7 @@ mod tests {
             page_size: Some(5),
         };
         let resp = server
-            .get(&format!("/users/{}/tabs", &user_id))
+            .get("/users/tabs")
             .add_query_params(pag_info)
             .add_header(header_name, header_value)
             .await;
@@ -420,7 +416,7 @@ mod tests {
             page_size: Some(5),
         };
         let resp = server
-            .get(&format!("/users/{}/tabs", &user_id))
+            .get("/users/tabs")
             .add_query_params(pag_info)
             .add_header(header_name, header_value)
             .await;
@@ -461,7 +457,7 @@ mod tests {
             page_size: Some(5),
         };
         let resp = server
-            .get(&format!("/users/{}/tabs", &user_id))
+            .get("/users/tabs")
             .add_query_params(pag_info)
             .add_header(header_name, header_value)
             .await;
@@ -502,7 +498,7 @@ mod tests {
             page_size: Some(5),
         };
         let resp = server
-            .get(&format!("/users/{}/tabs", &user_id))
+            .get("/users/tabs")
             .add_query_params(pag_info)
             .add_header(header_name, header_value)
             .await;
@@ -539,7 +535,7 @@ mod tests {
             page_size: Some(5),
         };
         let resp = server
-            .get(&format!("/users/{}/tabs", &user_id))
+            .get("/users/tabs")
             .add_query_params(pag_info)
             .add_header(header_name, header_value)
             .await;
@@ -576,7 +572,7 @@ mod tests {
             page_size: None,
         };
         let resp = server
-            .get(&format!("/users/{}/tabs", &user_id))
+            .get("/users/tabs")
             .add_query_params(pag_info)
             .add_header(header_name, header_value)
             .await;
@@ -593,49 +589,6 @@ mod tests {
         assert_eq!(paginated_tabs.results, expected_tabs);
         Ok(())
     }
-    #[test_log::test(tokio::test)]
-    async fn test_get_user_tabs_wrong_user() -> anyhow::Result<()> {
-        let pool = test_pool_from_env();
-        let server = test_app(tabs_router())?;
-        let mut user_data = Faker.fake::<NewConfirmedUser>();
-        user_data.confirmed = true;
-        let c = pool.get().await?;
-        let user = users::new_user_confirmed(c, user_data).await?;
-        let user_id = user.id.clone();
-        let c = pool.get().await?;
-        let _tabs = bulk_create_tabs(c, user_id.clone(), 5).await?;
-
-        let mut login_user_data = Faker.fake::<NewConfirmedUser>();
-        login_user_data.confirmed = true;
-        let c = pool.get().await?;
-        let login_user = users::new_user_confirmed(c, login_user_data).await?;
-        let login_user_email = login_user.email.clone();
-
-        let session = sessions::new_session(pool.clone(), login_user_email).await?;
-        let token = Claims::from_session(&session).test_to_token()?;
-        let bearer = format!("Bearer {}", token);
-        let header_value = header::HeaderValue::from_str(&bearer)?;
-        let header_name = header::AUTHORIZATION;
-        let pag_info = PaginationRequest {
-            page: Some(1),
-            page_size: Some(5),
-        };
-
-        let resp = server
-            .get(&format!("/users/{}/tabs", &user_id))
-            .add_query_params(pag_info)
-            .add_header(header_name, header_value)
-            .await;
-
-        let c = pool.get().await?;
-        let _ = tabs::delete_user_tabs(c, user_id.clone()).await?;
-        let c = pool.get().await?;
-        let _ = users::deconfirm_user(c, user_id.clone()).await?;
-
-        resp.assert_status(StatusCode::FORBIDDEN);
-        Ok(())
-    }
-
     #[test_log::test(tokio::test)]
     async fn test_get_tab_with_tags_ok() -> anyhow::Result<()> {
         use crate::models::tab::NewTabTag;

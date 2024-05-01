@@ -17,6 +17,7 @@ pub(crate) async fn authorize(
     State(st): State<AppState>,
     Json(payload): Json<AuthPayload>,
 ) -> Result<Json<AuthBody>, AppError> {
+    tracing::info!("authorize payload: {:?}", payload);
     if payload.client_id.is_empty() || payload.client_secret.is_empty() {
         return Err(AppError::MissingCredentials);
     }
