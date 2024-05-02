@@ -1,5 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
-import { Error, Login, Logout, Root, UserTabs } from "./routes";
+import * as routes from "./routes";
 
 export interface RouterProps {
   setAuthToken: (authToken: string | undefined) => void;
@@ -11,23 +11,41 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
     [
       {
         path: "/",
-        element: <Root authToken={authToken} />,
-        errorElement: <Error />,
+        element: <routes.Root authToken={authToken} />,
+        errorElement: <routes.Error />,
       },
       {
         path: "/login",
-        element: <Login setAuthToken={setAuthToken} />,
-        errorElement: <Error />,
+        element: <routes.Login setAuthToken={setAuthToken} />,
+        errorElement: <routes.Error />,
       },
       {
         path: "/logout",
-        element: <Logout authToken={authToken} setAuthToken={setAuthToken} />,
-        errorElement: <Error />,
+        element: (
+          <routes.Logout authToken={authToken} setAuthToken={setAuthToken} />
+        ),
+        errorElement: <routes.Error />,
       },
       {
         path: "/tabs",
-        element: <UserTabs authToken={authToken} setAuthToken={setAuthToken} />,
-        errorElement: <Error />,
+        element: (
+          <routes.UserTabs authToken={authToken} setAuthToken={setAuthToken} />
+        ),
+        errorElement: <routes.Error />,
+      },
+      {
+        path: "/tabs/:tabId/edit",
+        element: (
+          <routes.EditTab authToken={authToken} setAuthToken={setAuthToken} />
+        ),
+        errorElement: <routes.Error />,
+      },
+      {
+        path: "/tabs/:tabId/delete",
+        element: (
+          <routes.DeleteTab authToken={authToken} setAuthToken={setAuthToken} />
+        ),
+        errorElement: <routes.Error />,
       },
     ],
     { basename: "/app" },

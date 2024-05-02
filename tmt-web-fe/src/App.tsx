@@ -5,9 +5,6 @@ import "./App.css";
 
 function App() {
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    console.log("authToken:", authToken);
-  }, [authToken]);
   return <RouterProvider router={router({ authToken, setAuthToken })} />;
 }
 

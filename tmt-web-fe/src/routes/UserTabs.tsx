@@ -53,20 +53,10 @@ export default function UserTabs({ setAuthToken, authToken }: UserTabsProps) {
                 <th>url</th>
               </tr>
             </thead>
-            <tbody>
-              {userTabs.map((tab) => (
-                <tr key={tab.id}>
-                  <td>
-                    <button>edit</button>
-                    <button>delete</button>
-                  </td>
-                  <td>{tab.url}</td>
-                </tr>
-              ))}
-            </tbody>
+            <tbody>{userTabs.map(UserListTabRow)}</tbody>
           </table>
           <div>
-            {page > 0 && <button onClick={decrPage}>previous page</button>}
+            {page > 1 && <button onClick={decrPage}>previous page</button>}
             {hasMore && <button onClick={incrPage}>next page</button>}
           </div>
         </div>
@@ -75,5 +65,19 @@ export default function UserTabs({ setAuthToken, authToken }: UserTabsProps) {
         <Link to="/logout">Logout</Link>
       </div>
     </div>
+  );
+}
+
+function UserListTabRow({ id, url }: UserListTab) {
+  return (
+    <tr key={id}>
+      <td>
+        <Link to={`/tabs/${id}/edit`}>edit</Link>
+        <Link to={`/tabs/${id}/delete`}>delete</Link>
+      </td>
+      <td>
+        <a href={url}>{url}</a>
+      </td>
+    </tr>
   );
 }

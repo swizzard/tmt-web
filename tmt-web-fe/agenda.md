@@ -26,10 +26,10 @@
 
 ## Tabs
 
-- [ ] user dashboard
-- [ ] user tabs list
-  - [ ] pagination
-  - [ ] visit (link out)
+- [x] user dashboard
+- [x] user tabs list
+  - [x] pagination
+  - [x] visit (link out)
   - [ ] edit
   - [ ] delete
     - [ ] some kind of confirmation ui
