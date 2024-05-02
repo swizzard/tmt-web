@@ -39,3 +39,8 @@ where
 pub struct NewSession {
     pub user_id: String,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RenewSessionRequest {
+    pub token: String,
+}

@@ -1,22 +1,19 @@
 use crate::{
+    auth::decode_claims_no_expiry,
     db::{
         sessions::{delete_session, new_session, renew_session},
         validate_password,
     },
-    models::session::Session,
+    models::session::RenewSessionRequest,
     types::{AppError, AppState, AuthBody, AuthPayload, Claims, LogoutResult},
 };
-use axum::{
-    extract::State,
-    routing::{get, post},
-    Json, Router,
-};
+use axum::{extract::State, routing::post, Json, Router};
 
 pub fn auth_router() -> Router<AppState> {
     Router::new()
         .route("/authorize", post(authorize))
         .route("/logout", post(logout))
-        .route("/renew", get(renew))
+        .route("/renew", post(renew))
 }
 
 pub(crate) async fn authorize(
@@ -54,10 +51,11 @@ pub(crate) async fn logout(
 
 pub(crate) async fn renew(
     State(st): State<AppState>,
-    session: Session,
+    Json(RenewSessionRequest { token }): Json<RenewSessionRequest>,
 ) -> Result<Json<AuthBody>, AppError> {
     let conn = st.conn().await?;
-    let new_sess = renew_session(conn, session.id).await?;
+    let id = decode_claims_no_expiry(&token, st.decoding())?.jti;
+    let new_sess = renew_session(conn, id).await?;
     let claims = Claims::from_session(&new_sess);
     let token = claims.into_token(st.encoding())?;
     let ab = AuthBody::new(token);
@@ -250,7 +248,6 @@ mod test {
     }
     #[test_log::test(tokio::test)]
     async fn test_renew_ok() -> anyhow::Result<()> {
-        use http::header;
         let server = test_app(auth_router())?;
         let pool = test_pool_from_env();
 
@@ -267,14 +264,9 @@ mod test {
         let exp = session.expires;
         let token = Claims::from_session(&session).test_to_token()?;
 
-        let bearer = format!("Bearer {}", token);
-        let header_value = header::HeaderValue::from_str(&bearer)?;
-        let header_name = header::AUTHORIZATION;
+        let data = RenewSessionRequest { token };
 
-        let resp = server
-            .get("/renew")
-            .add_header(header_name, header_value)
-            .await;
+        let resp = server.post("/renew").json(&data).await;
 
         let c = pool.get().await?;
         let _d = deconfirm_user(c, uid).await?;

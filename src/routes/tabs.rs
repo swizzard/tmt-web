@@ -2,7 +2,7 @@ use crate::{
     db::{tabs, tags},
     models::{
         session::Session,
-        tab::{NewTab, NewTabTag, NewTabWithTags, Tab, TabWithTags},
+        tab::{NewTab, NewTabTag, NewTabWithTags, Tab, TabWithTags, UserListTab},
         tag::{NewTag, Tag},
     },
     types::{AppError, AppState, PaginatedResult, PaginationRequest},
@@ -113,7 +113,7 @@ async fn user_tabs(
     State(st): State<AppState>,
     session: Session,
     Query(pr): Query<PaginationRequest>,
-) -> Result<Json<PaginatedResult<Tab>>, AppError> {
+) -> Result<Json<PaginatedResult<UserListTab>>, AppError> {
     tracing::info!("getting tabs for user {} {:?}", session.user_id, pr);
     let pool = st.pool();
     let tabs = tabs::get_user_tabs(pool, session.user_id.clone(), pr).await?;
@@ -388,7 +388,7 @@ mod tests {
         let _ = users::deconfirm_user(c, user_id.clone()).await?;
 
         resp.assert_status_ok();
-        let paginated_tabs = resp.json::<PaginatedResult<Tab>>();
+        let paginated_tabs = resp.json::<PaginatedResult<UserListTab>>();
         assert!(!paginated_tabs.has_more);
         let gotten_tabs = paginated_tabs.results;
         assert_eq!(gotten_tabs, tabs);
@@ -428,7 +428,7 @@ mod tests {
         let _ = users::deconfirm_user(c, user_id.clone()).await?;
 
         resp.assert_status_ok();
-        let paginated_tabs = resp.json::<PaginatedResult<Tab>>();
+        let paginated_tabs = resp.json::<PaginatedResult<UserListTab>>();
         let offset_tabs = tabs.into_iter().skip(35).take(5).collect::<Vec<_>>();
         assert!(paginated_tabs.has_more);
         let gotten_tabs = paginated_tabs.results;
@@ -469,7 +469,7 @@ mod tests {
         let _ = users::deconfirm_user(c, user_id.clone()).await?;
 
         resp.assert_status_ok();
-        let paginated_tabs = resp.json::<PaginatedResult<Tab>>();
+        let paginated_tabs = resp.json::<PaginatedResult<UserListTab>>();
         let offset_tabs = tabs.into_iter().skip(35).take(5).collect::<Vec<_>>();
         assert!(!paginated_tabs.has_more);
         let gotten_tabs = paginated_tabs.results;
@@ -510,7 +510,7 @@ mod tests {
         let _ = users::deconfirm_user(c, user_id.clone()).await?;
 
         resp.assert_status_ok();
-        let paginated_tabs = resp.json::<PaginatedResult<Tab>>();
+        let paginated_tabs = resp.json::<PaginatedResult<UserListTab>>();
         assert!(!paginated_tabs.has_more);
         assert!(paginated_tabs.results.is_empty());
         Ok(())
@@ -545,7 +545,7 @@ mod tests {
         let _ = users::deconfirm_user(c, user_id.clone()).await?;
 
         resp.assert_status_ok();
-        let paginated_tabs = resp.json::<PaginatedResult<Tab>>();
+        let paginated_tabs = resp.json::<PaginatedResult<UserListTab>>();
         assert!(!paginated_tabs.has_more);
         assert!(paginated_tabs.results.is_empty());
         Ok(())
@@ -584,7 +584,7 @@ mod tests {
         let _ = users::deconfirm_user(c, user_id.clone()).await?;
 
         resp.assert_status_ok();
-        let paginated_tabs = resp.json::<PaginatedResult<Tab>>();
+        let paginated_tabs = resp.json::<PaginatedResult<UserListTab>>();
         let expected_tabs = tabs.into_iter().take(25).collect::<Vec<_>>();
         assert!(paginated_tabs.has_more);
         assert_eq!(paginated_tabs.results, expected_tabs);

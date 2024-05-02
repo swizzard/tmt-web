@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use crate::{
     db::util::{err_is_not_found, get_conn},
     models::{
-        tab::{NewTab, Tab, TabWithTags},
+        tab::{NewTab, Tab, TabWithTags, UserListTab},
         tag::Tag,
     },
     schema::{
@@ -95,7 +95,7 @@ pub async fn get_user_tabs(
     pool: Pool,
     user_id: String,
     pr: PaginationRequest,
-) -> Result<PaginatedResult<Tab>, AppError> {
+) -> Result<PaginatedResult<UserListTab>, AppError> {
     let offset = pr.offset();
     let limit = pr.limit();
 
@@ -120,7 +120,7 @@ pub async fn get_user_tabs(
         .limit(limit)
         .offset(offset);
     let tabs = c
-        .interact(move |conn| tabs_q.select(Tab::as_select()).get_results(conn))
+        .interact(move |conn| tabs_q.select(UserListTab::as_select()).get_results(conn))
         .await
         .map_err(|e| {
             tracing::error!("error getting user tabs: {:?}", e);

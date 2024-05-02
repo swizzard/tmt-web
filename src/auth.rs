@@ -16,8 +16,27 @@ pub(crate) async fn get_claims(parts: &mut Parts, key: &DecodingKey) -> Result<C
             tracing::error!("error parsing token: {:?}", e);
             AppError::InvalidToken
         })?;
+    decode_claims(bearer.token(), key)
+}
+
+pub(crate) fn decode_claims(token: &str, key: &DecodingKey) -> Result<Claims, AppError> {
     let validation = Validation::new(Algorithm::HS256);
-    let token_data = decode::<Claims>(bearer.token(), key, &validation).map_err(|e| {
+    _decode_claims(token, key, validation)
+}
+pub(crate) fn decode_claims_no_expiry(token: &str, key: &DecodingKey) -> Result<Claims, AppError> {
+    use std::collections::HashSet;
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.validate_exp = false;
+    validation.validate_nbf = false;
+    validation.required_spec_claims = HashSet::new();
+    _decode_claims(token, key, validation)
+}
+fn _decode_claims(
+    token: &str,
+    key: &DecodingKey,
+    validation: Validation,
+) -> Result<Claims, AppError> {
+    let token_data = decode::<Claims>(token, key, &validation).map_err(|e| {
         tracing::error!("error decoding token: {:?}", e);
         AppError::InvalidToken
     })?;
