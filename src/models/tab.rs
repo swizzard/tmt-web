@@ -34,6 +34,20 @@ pub struct NewTab {
     pub notes: Option<String>,
 }
 
+#[derive(Debug, Deserialize, Serialize, Selectable, Queryable, PartialEq)]
+#[diesel(table_name = crate::schema::tabs)]
+pub struct UserListTab {
+    pub id: String,
+    pub user_id: String,
+    pub url: String,
+}
+
+impl std::cmp::PartialEq<Tab> for UserListTab {
+    fn eq(&self, other: &Tab) -> bool {
+        self.id == other.id && self.user_id == other.user_id && self.url == other.url
+    }
+}
+
 #[derive(Debug, Insertable, Deserialize, Serialize)]
 #[diesel(table_name = crate::schema::tabs_tags)]
 pub struct NewTabTag {
