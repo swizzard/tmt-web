@@ -40,7 +40,6 @@ export default function UserTabs({ authToken }: UserTabsProps) {
               <tr>
                 <th>actions</th>
                 <th>url</th>
-                <th>notes</th>
               </tr>
             </thead>
             <tbody>
@@ -51,7 +50,6 @@ export default function UserTabs({ authToken }: UserTabsProps) {
                     <button>delete</button>
                   </td>
                   <td>{tab.url}</td>
-                  <td>{tab.notes.slice(0, 10)}</td>
                 </tr>
               ))}
             </tbody>

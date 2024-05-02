@@ -53,7 +53,6 @@ export interface UserListTab {
   id: string;
   user_id: string;
   url: string;
-  notes: string;
 }
 
 export interface UserTabsResult {
