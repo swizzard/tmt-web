@@ -19,10 +19,14 @@ export interface LoginInput {
   email: string;
   password: string;
 }
+
+export interface AuthResponse {
+  access_token: string;
+}
 export async function authorize({
   email: client_id,
   password: client_secret,
-}: LoginInput): Promise<{ access_token: string }> {
+}: LoginInput): Promise<AuthResponse> {
   const endpoint = new URL("authorize", API_URL);
   const body = JSON.stringify({ client_id, client_secret });
   const resp = await fetch(endpoint.href, {
@@ -97,5 +101,45 @@ export async function getUserTabs({
       Authorization: `Bearer ${authToken}`,
     },
   });
-  return resp.json();
+  const data = await resp.json();
+  if (!resp.ok) {
+    throw new TMTError(data.error);
+  } else {
+    return data;
+  }
+}
+
+interface RenewRequest {
+  token: string;
+}
+
+export async function renewToken({
+  token,
+}: RenewRequest): Promise<AuthResponse> {
+  const endpoint = new URL("renew", API_URL);
+  const body = JSON.stringify({ token });
+  const resp = await fetch(endpoint.href, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    throw new TMTError(data.error);
+  } else {
+    return data;
+  }
+}
+
+export class TMTError extends Error {
+  isToken: boolean;
+  constructor(message: string) {
+    super(message);
+    this.isToken = TMTError.isTokenError(message);
+  }
+  static isTokenError(message: string): boolean {
+    return message === "Invalid token";
+  }
 }

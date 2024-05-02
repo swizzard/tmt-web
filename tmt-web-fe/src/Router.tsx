@@ -26,7 +26,7 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
       },
       {
         path: "/tabs",
-        element: <UserTabs authToken={authToken} />,
+        element: <UserTabs authToken={authToken} setAuthToken={setAuthToken} />,
         errorElement: <Error />,
       },
     ],

@@ -30,6 +30,20 @@
     }
     ```
 
+- `POST /renew`
+  - request:
+    ```json
+    {
+      "refresh_token": string
+    }
+    ```
+  - response:
+    ```json
+    {
+      "access_token": string,
+      "token_type": string
+    }
+    ```
 - `POST /tabs`
   - request:
     ```json
