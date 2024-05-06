@@ -8,7 +8,7 @@
 
 - [x] all user tabs
   - [x] pagination
-- [ ] edit tab
+- [x] edit tab
   - top-level fields
   - add/remove/create tags
 
@@ -36,10 +36,10 @@ TK
 
 #### users
 
-- [ ] login
+- [x] login
 - [ ] sign up
 - [ ] confirm sign up
-- [ ] logout
+- [x] logout
 
 #### tabs
 
@@ -68,8 +68,8 @@ TK
 - [ ] tab `title: Option<String>`
 - [ ] search for tab
 - [ ] list tabs given tag
-- [ ] renew session token
+- [x] renew session token
 
 ## other
 
-- [ ] deletes returning 0 should throw NotFound instead?
+- [x] deletes returning 0 should throw NotFound instead?
