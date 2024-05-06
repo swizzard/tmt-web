@@ -2,7 +2,9 @@ use crate::{
     db::{tabs, tags},
     models::{
         session::Session,
-        tab::{NewTab, NewTabTag, NewTabWithTags, Tab, TabWithTags, UserListTab},
+        tab::{
+            NewTab, NewTabTag, NewTabWithTags, Tab, TabWithTags, UpdateTabWithTags, UserListTab,
+        },
         tag::{NewTag, Tag},
     },
     types::{AppError, AppState, PaginatedResult, PaginationRequest},
@@ -11,7 +13,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
 
@@ -20,6 +22,7 @@ pub fn tabs_router() -> Router<AppState> {
         .route("/tabs", post(create))
         .route("/tabs/with-tags", post(create_with_tags))
         .route("/tabs/:tab_id", get(get_tab))
+        .route("/tabs/:tab_id", put(edit_tab))
         .route("/tabs/:tab_id/with-tags", get(get_tab_with_tags))
         .route("/users/tabs", get(user_tabs))
 }
@@ -120,18 +123,38 @@ async fn user_tabs(
     Ok(Json(tabs))
 }
 
+async fn edit_tab(
+    State(st): State<AppState>,
+    session: Session,
+    Path(tab_id): Path<String>,
+    Json(payload): Json<UpdateTabWithTags>,
+) -> Result<Json<TabWithTags>, AppError> {
+    let conn = st.conn().await?;
+    let updated = tabs::update_tab_and_tags(conn, tab_id, session.user_id.clone(), payload).await?;
+    Ok(Json(updated))
+}
+
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
     use crate::{
         db::{
             sessions,
             tags::bulk_mk_tab_tags,
-            test_util::{bulk_create_tabs, bulk_create_tags},
+            test_util::{bulk_create_tabs, bulk_create_tags, bulk_create_tags_from_strings},
             users,
         },
-        models::{tag::MaybeNewTag, user::NewConfirmedUser},
-        routes::_test_utils::test_app,
+        models::{
+            tab::{UpdateTab, UpdateTags},
+            tag::MaybeNewTag,
+            user::NewConfirmedUser,
+        },
+        routes::{
+            _test_utils::test_app,
+            tabs::tests::{tabs::get_tab_tags, tags::get_tags_by_ids},
+        },
         types::{test_pool_from_env, Claims},
     };
     use fake::{Fake, Faker};
@@ -715,6 +738,273 @@ mod tests {
         assert_eq!(tab_with_tags.tab.url, url);
         assert_eq!(tab_with_tags.tab.notes, notes);
         assert_eq!(tab_with_tags.tags.len(), 5);
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_edit_tab_update_tab_no_tags_ok() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tabs_router())?;
+
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let new_url = String::from("http://example.com/new");
+        let new_notes = Some(String::from("new notes"));
+
+        let old_tab_data = NewTab {
+            user_id: user_id.clone(),
+            url: String::from("http://example.com/old"),
+            notes: None,
+        };
+        let c = pool.get().await?;
+        let old_tab = tabs::new_tab(c, old_tab_data).await?;
+        let tab_id = old_tab.id.clone();
+
+        let update_data = UpdateTabWithTags {
+            tab: UpdateTab {
+                url: new_url.clone(),
+                notes: new_notes.clone(),
+            },
+            tags: vec![],
+        };
+        let session = sessions::new_session(pool.clone(), user.email.clone()).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let resp = server
+            .put(&format!("/tabs/{}", tab_id))
+            .json(&update_data)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        tabs::delete_user_tabs(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let updated_tab = resp.json::<TabWithTags>();
+        assert_eq!(updated_tab.tab.url, new_url);
+        assert_eq!(updated_tab.tab.notes, new_notes);
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_edit_tab_update_tab_same_tags() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tabs_router())?;
+
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let old_url = String::from("http://example.com/old");
+        let old_notes = Some(String::from("old notes"));
+
+        let old_tab_data = NewTab {
+            user_id: user_id.clone(),
+            url: old_url.clone(),
+            notes: old_notes.clone(),
+        };
+        let c = pool.get().await?;
+        let old_tab = tabs::new_tab(c, old_tab_data).await?;
+        let tab_id = old_tab.id.clone();
+        let c = pool.get().await?;
+        let tags =
+            bulk_create_tags_from_strings(c, user_id.clone(), vec!["tag1".into(), "tag2".into()])
+                .await?;
+        let mut update_tags: UpdateTags = Vec::new();
+        let mut tts_to_insert: Vec<NewTabTag> = Vec::new();
+        for tag in tags.iter() {
+            update_tags.push(MaybeNewTag {
+                id: Some(tag.id.clone()),
+                user_id: user_id.clone(),
+                tag: tag.tag.clone(),
+            });
+            tts_to_insert.push(NewTabTag {
+                tab_id: tab_id.clone(),
+                tag_id: tag.id.clone(),
+            });
+        }
+        let c = pool.get().await?;
+        bulk_mk_tab_tags(c, tts_to_insert).await?;
+
+        let update_data = UpdateTabWithTags {
+            tab: UpdateTab {
+                url: old_url.clone(),
+                notes: old_notes.clone(),
+            },
+            tags: update_tags,
+        };
+        let session = sessions::new_session(pool.clone(), user.email.clone()).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let resp = server
+            .put(&format!("/tabs/{}", tab_id))
+            .json(&update_data)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        tabs::delete_user_tabs(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let updated_tab = resp.json::<TabWithTags>();
+        assert_eq!(updated_tab.tab.url, old_url);
+        assert_eq!(updated_tab.tab.notes, old_notes);
+        let updated_tags: HashSet<&Tag> = HashSet::from_iter(updated_tab.tags.iter());
+        let old_tags: HashSet<&Tag> = HashSet::from_iter(tags.iter());
+        assert_eq!(updated_tags, old_tags);
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_edit_tab_update_tab_delete_tags() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tabs_router())?;
+
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let old_url = String::from("http://example.com/old");
+        let old_notes = Some(String::from("old notes"));
+
+        let old_tab_data = NewTab {
+            user_id: user_id.clone(),
+            url: old_url.clone(),
+            notes: old_notes.clone(),
+        };
+        let c = pool.get().await?;
+        let old_tab = tabs::new_tab(c, old_tab_data).await?;
+        let tab_id = old_tab.id.clone();
+        let c = pool.get().await?;
+        let tags =
+            bulk_create_tags_from_strings(c, user_id.clone(), vec!["tag1".into(), "tag2".into()])
+                .await?;
+        let mut tag_ids: Vec<String> = Vec::with_capacity(tags.len());
+        let mut tts_to_insert: Vec<NewTabTag> = Vec::with_capacity(tags.len());
+        for tag in tags.iter() {
+            tag_ids.push(tag.id.clone());
+            tts_to_insert.push(NewTabTag {
+                tab_id: tab_id.clone(),
+                tag_id: tag.id.clone(),
+            });
+        }
+        let c = pool.get().await?;
+        bulk_mk_tab_tags(c, tts_to_insert).await?;
+
+        let update_data = UpdateTabWithTags {
+            tab: UpdateTab {
+                url: old_url.clone(),
+                notes: old_notes.clone(),
+            },
+            tags: vec![],
+        };
+        let session = sessions::new_session(pool.clone(), user.email.clone()).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let resp = server
+            .put(&format!("/tabs/{}", tab_id))
+            .json(&update_data)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        tabs::delete_user_tabs(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let updated_tab = resp.json::<TabWithTags>();
+        assert_eq!(updated_tab.tab.url, old_url);
+        assert_eq!(updated_tab.tab.notes, old_notes);
+        assert!(updated_tab.tags.is_empty());
+        let c = pool.get().await?;
+        let existing = get_tags_by_ids(c, tag_ids).await?;
+        assert_eq!(tags, existing);
+        Ok(())
+    }
+    #[ignore]
+    #[test_log::test(tokio::test)]
+    async fn test_edit_tab_update_tab_create_and_attach_tags() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tabs_router())?;
+
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let c = pool.get().await?;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+        let old_url = String::from("http://example.com/old");
+        let old_notes = Some(String::from("old notes"));
+
+        let old_tab_data = NewTab {
+            user_id: user_id.clone(),
+            url: old_url.clone(),
+            notes: old_notes.clone(),
+        };
+        let c = pool.get().await?;
+        let old_tab = tabs::new_tab(c, old_tab_data).await?;
+        let tab_id = old_tab.id.clone();
+        let c = pool.get().await?;
+        let tags =
+            bulk_create_tags_from_strings(c, user_id.clone(), vec!["tag1".into(), "tag2".into()])
+                .await?;
+        let mut to_attach = tags
+            .iter()
+            .map(|tag| MaybeNewTag {
+                id: Some(tag.id.clone()),
+                user_id: user_id.clone(),
+                tag: tag.tag.clone(),
+            })
+            .collect::<Vec<_>>();
+        to_attach.push(MaybeNewTag {
+            id: None,
+            user_id: user_id.clone(),
+            tag: String::from("new tag"),
+        });
+
+        let update_data = UpdateTabWithTags {
+            tab: UpdateTab {
+                url: old_url.clone(),
+                notes: old_notes.clone(),
+            },
+            tags: to_attach,
+        };
+        let session = sessions::new_session(pool.clone(), user.email.clone()).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let resp = server
+            .put(&format!("/tabs/{}", tab_id))
+            .json(&update_data)
+            .add_header(header_name, header_value)
+            .await;
+
+        let c = pool.get().await?;
+        tabs::delete_user_tabs(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
+
+        resp.assert_status_ok();
+        let updated_tab = resp.json::<TabWithTags>();
+        assert_eq!(updated_tab.tab.url, old_url);
+        assert_eq!(updated_tab.tab.notes, old_notes);
+
+        let c = pool.get().await?;
+        let actual_tags = get_tab_tags(c, user_id.clone(), tab_id.clone()).await?;
+        assert_eq!(3, actual_tags.len());
         Ok(())
     }
 }

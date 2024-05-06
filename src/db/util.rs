@@ -2,7 +2,7 @@ use crate::types::AppError;
 use deadpool_diesel::postgres::{Connection, Pool};
 use diesel::result::{Error as DE, UnexpectedNullError};
 
-pub(crate) async fn get_conn(pool: Pool) -> Result<Connection, AppError> {
+pub(crate) async fn get_conn(pool: &Pool) -> Result<Connection, AppError> {
     pool.get().await.map_err(|e| {
         tracing::error!("db connection error {:?}", e);
         AppError::InternalServerError

@@ -77,11 +77,11 @@ pub async fn attach_tag(
     let bid = tab_id.clone();
     let gid = tag_id.clone();
     let guid = user_id.clone();
-    if tab_belongs(get_conn(pool.clone()).await?, bid, buid).await?
-        && tag_belongs(get_conn(pool.clone()).await?, gid, guid).await?
+    if tab_belongs(get_conn(&pool).await?, bid, buid).await?
+        && tag_belongs(get_conn(&pool).await?, gid, guid).await?
     {
         let ntt = NewTabTag { tab_id, tag_id };
-        let conn = get_conn(pool).await?;
+        let conn = get_conn(&pool).await?;
         let CreatedTabTag { tab_id, tag_id } = conn
             .interact(move |conn| {
                 diesel::insert_into(tabs_tags::table)
@@ -128,10 +128,10 @@ pub async fn detach_tag(
     let guid = user_id.clone();
     tracing::info!("tab_id: {:?}", &bid2);
     tracing::info!("tag_id: {:?}", &gid2);
-    if tab_belongs(get_conn(pool.clone()).await?, bid, buid).await?
-        && tag_belongs(get_conn(pool.clone()).await?, gid, guid).await?
+    if tab_belongs(get_conn(&pool).await?, bid, buid).await?
+        && tag_belongs(get_conn(&pool).await?, gid, guid).await?
     {
-        let conn = get_conn(pool).await?;
+        let conn = get_conn(&pool).await?;
         conn.interact(|conn| {
             diesel::delete(tabs_tags::table)
                 .filter(tt_dsl::tab_id.eq(bid2))
@@ -359,6 +359,24 @@ pub async fn bulk_mk_tab_tags(
         AppError::DBError
     })
 }
+pub async fn bulk_insert_tags(conn: Connection, data: Vec<NewTag>) -> Result<Vec<Tag>, AppError> {
+    conn.interact(|conn| {
+        diesel::insert_into(tags::table)
+            .values(data)
+            .returning(Tag::as_returning())
+            .get_results(conn)
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("error bulk inserting tags: {:?}", e);
+        AppError::DBError
+    })?
+    .map_err(|e| {
+        tracing::error!("error bulk inserting tags: {:?}", e);
+        AppError::DBError
+    })
+}
+
 #[cfg(test)]
 pub async fn get_tab_tag(
     conn: Connection,
@@ -385,20 +403,21 @@ pub async fn get_tab_tag(
         }
     })
 }
-pub async fn bulk_insert_tags(conn: Connection, data: Vec<NewTag>) -> Result<Vec<Tag>, AppError> {
-    conn.interact(|conn| {
-        diesel::insert_into(tags::table)
-            .values(data)
-            .returning(Tag::as_returning())
+
+#[cfg(test)]
+pub async fn get_tags_by_ids(conn: Connection, tag_ids: Vec<String>) -> Result<Vec<Tag>, AppError> {
+    conn.interact(move |conn| {
+        tags_dsl::tags
+            .filter(tags_dsl::id.eq_any(tag_ids))
             .get_results(conn)
     })
     .await
     .map_err(|e| {
-        tracing::error!("error bulk inserting tags: {:?}", e);
+        tracing::error!("error getting tags by ids: {:?}", e);
         AppError::DBError
     })?
     .map_err(|e| {
-        tracing::error!("error bulk inserting tags: {:?}", e);
+        tracing::error!("error getting tags by ids: {:?}", e);
         AppError::DBError
     })
 }

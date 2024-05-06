@@ -15,7 +15,7 @@ pub struct Tab {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Identifiable, Selectable, Queryable, Associations)]
+#[derive(Debug, Deserialize, Identifiable, Selectable, Queryable, Associations)]
 #[diesel(belongs_to(Tab))]
 #[diesel(belongs_to(Tag))]
 #[diesel(table_name = crate::schema::tabs_tags)]
@@ -33,6 +33,14 @@ pub struct NewTab {
     pub url: String,
     pub notes: Option<String>,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct UpdateTab {
+    pub url: String,
+    pub notes: Option<String>,
+}
+
+pub type UpdateTags = Vec<MaybeNewTag>;
 
 #[derive(Debug, Deserialize, Serialize, Selectable, Queryable, PartialEq)]
 #[diesel(table_name = crate::schema::tabs)]
@@ -99,4 +107,10 @@ pub struct TagDetachedResponse {
 pub struct NewTabWithTags {
     pub tab: NewTab,
     pub tags: Vec<MaybeNewTag>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct UpdateTabWithTags {
+    pub tab: UpdateTab,
+    pub tags: UpdateTags,
 }

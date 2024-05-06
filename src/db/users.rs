@@ -103,11 +103,10 @@ pub async fn confirm_user(
     user_id: String,
     email: String,
 ) -> Result<User, AppError> {
-    let p = pool.clone();
-    let conn = get_conn(p).await?;
+    let conn = get_conn(&pool).await?;
     let inv_id = confirm_invite(conn, invite_id.clone(), user_id.clone(), email.clone()).await?;
     tracing::info!("confirmed invite {:?}", inv_id);
-    let conn = get_conn(pool).await?;
+    let conn = get_conn(&pool).await?;
     conn.interact(|conn| {
         diesel::update(users_dsl::users)
             .filter(users_dsl::id.eq(user_id))

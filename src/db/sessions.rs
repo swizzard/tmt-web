@@ -14,7 +14,7 @@ use crate::{
 };
 
 pub async fn new_session(pool: Pool, user_email: String) -> Result<Session, AppError> {
-    let conn = get_conn(pool).await?;
+    let conn = get_conn(&pool).await?;
     let user_id: String = conn
         .interact(|conn| {
             users_dsl::users

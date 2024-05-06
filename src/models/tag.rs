@@ -1,7 +1,7 @@
 use diesel::{deserialize::Queryable, Insertable, Selectable};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Queryable, Selectable, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, Hash, Queryable, Selectable, Serialize, PartialEq)]
 #[diesel(table_name = crate::schema::tags)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[cfg_attr(test, derive(Clone))]
