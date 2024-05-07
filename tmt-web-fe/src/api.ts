@@ -137,6 +137,67 @@ export async function renewToken({
   }
 }
 
+export interface SignupInput {
+  password: string;
+  email: string;
+}
+
+export interface SignupResponse {
+  email: string;
+  invite_id: string;
+  user_id: string;
+}
+
+export async function signup(input: SignupInput): Promise<SignupResponse> {
+  const endpoint = new URL("users", API_URL);
+  const body = JSON.stringify(input);
+  const resp = await fetch(endpoint.href, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+  const respData = await resp.json();
+  if (resp.ok) {
+    return respData;
+  } else {
+    throw new TMTError(respData.error);
+  }
+}
+
+export interface ConfirmUserInput {
+  email: string;
+  invite_id: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  confirmed: boolean;
+}
+
+export async function confirmUser(
+  userId: string,
+  input: ConfirmUserInput,
+): Promise<User> {
+  const endpoint = new URL(`users/${userId}`, API_URL);
+  const body = JSON.stringify(input);
+  const resp = await fetch(endpoint.href, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+  const respData = await resp.json();
+  if (resp.ok) {
+    return respData;
+  } else {
+    throw new TMTError(respData.error);
+  }
+}
+
 export class TMTError extends Error {
   isToken: boolean;
   constructor(message: string) {

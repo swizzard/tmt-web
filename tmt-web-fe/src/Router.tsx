@@ -29,6 +29,18 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
         errorElement: <routes.Error />,
       },
       {
+        path: "/signup",
+        element: <routes.SignUp />,
+        errorElement: <routes.Error />,
+        action: routes.signUpAction,
+      },
+      {
+        path: "/confirm/:userId",
+        element: <routes.ConfirmUser />,
+        errorElement: <routes.Error />,
+        action: routes.confirmUserAction,
+      },
+      {
         path: "/tabs",
         element: (
           <routes.UserTabs authToken={authToken} setAuthToken={setAuthToken} />
