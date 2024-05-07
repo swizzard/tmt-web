@@ -1,49 +1,30 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { Form, redirect } from "react-router-dom";
 import { authorize, LoginInput } from "../api";
 
-export interface LoginProps {
-  setAuthToken: (authToken: string | undefined) => void;
-}
-export default function Login({ setAuthToken }: LoginProps) {
-  const {
-    reset,
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<LoginInput>();
-  const navigate = useNavigate();
-  const w = watch();
-  const [err, setErr] = useState<string | undefined>();
-  const onSubmit: SubmitHandler<LoginInput> = async (data) => {
-    try {
-      const { access_token } = await authorize(data);
-      setAuthToken(access_token);
-      navigate("/tabs", { state: { authToken: access_token } });
-    } catch (e: any) {
-      setErr(e.message ?? JSON.stringify(e));
-      reset();
-    }
+export function mkAction(
+  setAuthToken: (authToken: string | undefined) => void,
+) {
+  return async function action({ request }: { request: Request }) {
+    const formData = await request.formData();
+    const data: LoginInput = {
+      email: formData.get("email") as string,
+      password: formData.get("password") as string,
+    };
+    const { access_token } = await authorize(data);
+    setAuthToken(access_token);
+    return redirect("/tabs");
   };
-  useEffect(() => {
-    console.log("errors:", errors);
-  }, [errors]);
-
-  useEffect(() => {
-    setErr(undefined);
-  }, [w.email, w.password]);
+}
+export default function Login() {
   return (
     <div className="Login">
-      {err && <div className="err">{err}</div>}
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <Form method="post" action="/login">
         <label htmlFor="email">Email</label>
-        <input type="email" id="email" {...register("email")} />
+        <input type="email" id="email" name="email" />
         <label htmlFor="password">Password</label>
-        <input type="password" id="password" {...register("password")} />
-        <input type="submit" />
-      </form>
+        <input type="password" id="password" name="password" />
+        <button type="submit">Login</button>
+      </Form>
     </div>
   );
 }
