@@ -10,9 +10,14 @@ export function mkAction(
       email: formData.get("email") as string,
       password: formData.get("password") as string,
     };
-    const { access_token } = await authorize(data);
-    setAuthToken(access_token);
-    return redirect("/tabs");
+    try {
+      const { access_token } = await authorize(data);
+      console.log("access_token", access_token);
+      setAuthToken(access_token);
+      return redirect("/tabs");
+    } catch (e) {
+      throw e;
+    }
   };
 }
 export default function Login() {

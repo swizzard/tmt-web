@@ -36,7 +36,12 @@ export async function authorize({
     },
     body,
   });
-  return resp.json();
+  const data = await resp.json();
+  if (resp.ok) {
+    return data;
+  } else {
+    throw new TMTError(data.error);
+  }
 }
 
 export async function logout({
