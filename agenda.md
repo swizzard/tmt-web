@@ -37,8 +37,8 @@ TK
 #### users
 
 - [x] login
-- [ ] sign up
-- [ ] confirm sign up
+- [x] sign up
+- [x] confirm sign up
 - [x] logout
 
 #### tabs

@@ -15,14 +15,14 @@
 - [x] remove token from state
 - [x] redirect to login
 - signup
-- [ ] form
-  - [ ] email
-  - [ ] password
+- [x] form
+  - [x] email
+  - [x] password
 - signup complete
-  - [ ] "visit confirm url to confirm"
+  - [-] "visit confirm url to confirm"
 - confirmation page
-  - [ ] api request
-  - [ ] redirect to login
+  - [x] api request
+  - [x] redirect to login
 
 ## Tabs
 
