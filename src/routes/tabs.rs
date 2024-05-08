@@ -46,11 +46,13 @@ async fn create_with_tags(
     session: Session,
     Json(payload): Json<NewTabWithTags>,
 ) -> Result<impl IntoResponse, AppError> {
-    if payload.tab.user_id != session.user_id {
-        return Err(AppError::WrongCredentials);
-    }
+    let tab_with_user_id = NewTab {
+        user_id: session.user_id.clone(),
+        url: payload.tab.url,
+        notes: payload.tab.notes,
+    };
     let conn = st.conn().await?;
-    let tab = tabs::new_tab(conn, payload.tab).await?;
+    let tab = tabs::new_tab(conn, tab_with_user_id).await?;
     let tab_id = tab.id.clone();
     let tags = payload.tags;
     let mut new: Vec<NewTag> = Vec::with_capacity(tags.len());
@@ -147,7 +149,7 @@ mod tests {
             users,
         },
         models::{
-            tab::{UpdateTab, UpdateTags},
+            tab::{RequestedNewTab, UpdateTab, UpdateTags},
             tag::MaybeNewTag,
             user::NewConfirmedUser,
         },
@@ -713,8 +715,7 @@ mod tests {
         let url = String::from("https://example.com");
         let notes: Option<String> = Some("notes".into());
         let tab_data = NewTabWithTags {
-            tab: NewTab {
-                user_id: user_id.clone(),
+            tab: RequestedNewTab {
                 url: url.clone(),
                 notes: notes.clone(),
             },

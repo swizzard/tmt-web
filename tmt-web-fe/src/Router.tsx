@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import * as routes from "./routes";
 
 export interface RouterProps {
@@ -40,18 +40,25 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
       },
       {
         path: "/tabs",
-        element: <routes.UserTabs />,
-        errorElement: <routes.Error />,
-        loader: routes.userTabsLoader,
         children: [
           {
-            path: ":page",
+            path: "",
+            element: <Navigate to="/tabs/personal/1" />,
+          },
+          {
+            path: "create",
+            element: <routes.CreateTab />,
+            errorElement: <routes.Error />,
+            action: routes.createTabAction,
+          },
+          {
+            path: "personal/:page",
             element: <routes.UserTabs />,
             errorElement: <routes.Error />,
             loader: routes.userTabsLoader,
           },
           {
-            path: ":tabId/edit",
+            path: "edit/:tabId",
             element: (
               <routes.EditTab
                 authToken={authToken}
@@ -61,7 +68,7 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
             errorElement: <routes.Error />,
           },
           {
-            path: ":tabId/delete",
+            path: "edit/:tabId",
             element: (
               <routes.DeleteTab
                 authToken={authToken}

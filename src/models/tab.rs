@@ -35,6 +35,12 @@ pub struct NewTab {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct RequestedNewTab {
+    pub url: String,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateTab {
     pub url: String,
     pub notes: Option<String>,
@@ -105,7 +111,7 @@ pub struct TagDetachedResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NewTabWithTags {
-    pub tab: NewTab,
+    pub tab: RequestedNewTab,
     pub tags: Vec<MaybeNewTag>,
 }
 

@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from "react";
 import { Link, Params, useLoaderData } from "react-router-dom";
 import { getUserTabs, renewToken, UserListTab, UserTabsResult } from "../api";
 import { getToken, setToken } from "../authToken";
@@ -57,17 +56,17 @@ export default function UserTabs() {
           </table>
           <div>
             {page > 1 && (
-              <Link to={`/tabs/${page - 1}`} reloadDocument={true}>
+              <Link to={`../personal/${page - 1}`} reloadDocument={true}>
                 prev page
               </Link>
             )}
             {hasMore ? (
               page === 1 ? (
-                <Link to={`/tabs/2`} reloadDocument={true}>
+                <Link to={`../personal/2`} reloadDocument={true}>
                   next page
                 </Link>
               ) : (
-                <Link to={`/tabs/${page + 1}`} reloadDocument={true}>
+                <Link to={`../personal/${page + 1}`} reloadDocument={true}>
                   next page
                 </Link>
               )
@@ -75,6 +74,9 @@ export default function UserTabs() {
           </div>
         </div>
       )}
+      <div>
+        <Link to="/tabs/create">Create Tab</Link>
+      </div>
       <div>
         <Link to="/logout">Logout</Link>
       </div>

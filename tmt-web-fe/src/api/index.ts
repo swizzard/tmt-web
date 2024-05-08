@@ -11,6 +11,7 @@ export {
 export {
   createTab,
   getUserTabs,
+  type NewTabInput,
   type NewTabRequest,
   type UserListTab,
   type UserTabsResult,

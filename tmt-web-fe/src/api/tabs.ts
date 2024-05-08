@@ -29,7 +29,7 @@ export async function createTab({
   authToken,
   data,
 }: AuthorizedPost<NewTabInput>) {
-  const endpoint = new URL("tabs", API_URL);
+  const endpoint = new URL("tabs/with-tags", API_URL);
   const resp = await fetch(endpoint.href, {
     method: "POST",
     headers: {
@@ -38,11 +38,16 @@ export async function createTab({
     },
     body: JSON.stringify(data),
   });
-  const responseData = await resp.json();
-  if (!resp.ok) {
-    throw new TMTError(responseData.error);
-  } else {
-    return responseData;
+  try {
+    const responseData = await resp.json();
+    if (!resp.ok) {
+      throw new TMTError(responseData.error);
+    } else {
+      return responseData;
+    }
+  } catch (_e: any) {
+    console.log(resp.body);
+    throw new TMTError("Unknown error");
   }
 }
 export interface UserListTab {
@@ -57,7 +62,6 @@ export interface UserTabsResult {
 }
 
 export interface NewTab {
-  user_id: string;
   url: string;
   notes?: string;
 }

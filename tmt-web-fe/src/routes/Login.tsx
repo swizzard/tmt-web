@@ -11,7 +11,7 @@ export async function action({ request }: { request: Request }) {
   try {
     const { access_token } = await authorize(data);
     setToken(access_token);
-    return redirect("/tabs");
+    return redirect("/tabs/personal/1");
   } catch (e) {
     throw e;
   }
