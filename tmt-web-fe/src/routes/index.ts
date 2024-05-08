@@ -9,4 +9,4 @@ export { default as Login, action as loginAction } from "./Login";
 export { default as Logout, action as logoutAction } from "./Logout";
 export { default as Root } from "./Root";
 export { default as SignUp, action as signUpAction } from "./SignUp";
-export { default as UserTabs } from "./UserTabs";
+export { default as UserTabs, loader as userTabsLoader } from "./UserTabs";

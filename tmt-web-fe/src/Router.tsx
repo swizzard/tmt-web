@@ -42,20 +42,35 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
         path: "/tabs",
         element: <routes.UserTabs />,
         errorElement: <routes.Error />,
-      },
-      {
-        path: "/tabs/:tabId/edit",
-        element: (
-          <routes.EditTab authToken={authToken} setAuthToken={setAuthToken} />
-        ),
-        errorElement: <routes.Error />,
-      },
-      {
-        path: "/tabs/:tabId/delete",
-        element: (
-          <routes.DeleteTab authToken={authToken} setAuthToken={setAuthToken} />
-        ),
-        errorElement: <routes.Error />,
+        loader: routes.userTabsLoader,
+        children: [
+          {
+            path: ":page",
+            element: <routes.UserTabs />,
+            errorElement: <routes.Error />,
+            loader: routes.userTabsLoader,
+          },
+          {
+            path: ":tabId/edit",
+            element: (
+              <routes.EditTab
+                authToken={authToken}
+                setAuthToken={setAuthToken}
+              />
+            ),
+            errorElement: <routes.Error />,
+          },
+          {
+            path: ":tabId/delete",
+            element: (
+              <routes.DeleteTab
+                authToken={authToken}
+                setAuthToken={setAuthToken}
+              />
+            ),
+            errorElement: <routes.Error />,
+          },
+        ],
       },
     ],
     { basename: "/app" },
