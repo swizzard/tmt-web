@@ -18,15 +18,13 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
         path: "/login",
         element: <routes.Login />,
         errorElement: <routes.Error />,
-        action: routes.mkLoginAction(setAuthToken),
+        action: routes.loginAction,
       },
-
       {
         path: "/logout",
-        element: (
-          <routes.Logout authToken={authToken} setAuthToken={setAuthToken} />
-        ),
+        element: <routes.Logout />,
         errorElement: <routes.Error />,
+        action: routes.logoutAction,
       },
       {
         path: "/signup",
@@ -42,11 +40,8 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
       },
       {
         path: "/tabs",
-        element: (
-          <routes.UserTabs authToken={authToken} setAuthToken={setAuthToken} />
-        ),
+        element: <routes.UserTabs />,
         errorElement: <routes.Error />,
-        loader: async ({ request }) => request.headers.get("Authorization"),
       },
       {
         path: "/tabs/:tabId/edit",

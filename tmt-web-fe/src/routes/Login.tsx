@@ -1,25 +1,22 @@
 import { Form, redirect } from "react-router-dom";
 import { authorize, LoginInput } from "../api";
+import { setToken } from "../authToken";
 
-export function mkAction(
-  setAuthToken: (authToken: string | undefined) => void,
-) {
-  return async function action({ request }: { request: Request }) {
-    const formData = await request.formData();
-    const data: LoginInput = {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-    };
-    try {
-      const { access_token } = await authorize(data);
-      console.log("access_token", access_token);
-      setAuthToken(access_token);
-      return redirect("/tabs");
-    } catch (e) {
-      throw e;
-    }
+export async function action({ request }: { request: Request }) {
+  const formData = await request.formData();
+  const data: LoginInput = {
+    email: formData.get("email") as string,
+    password: formData.get("password") as string,
   };
+  try {
+    const { access_token } = await authorize(data);
+    setToken(access_token);
+    return redirect("/tabs");
+  } catch (e) {
+    throw e;
+  }
 }
+
 export default function Login() {
   return (
     <div className="Login">

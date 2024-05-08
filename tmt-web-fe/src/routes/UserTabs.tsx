@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { getUserTabs, renewToken, UserListTab, UserTabsResult } from "../api";
+import useAuthToken from "../authToken";
 
 export interface UserTabsProps {
   authToken?: string;
   setAuthToken: (token: string) => void;
 }
-export default function UserTabs({ setAuthToken, authToken }: UserTabsProps) {
-  const { state } = useLocation();
+export default function UserTabs() {
+  const { authToken, setAuthToken } = useAuthToken();
   const [err, setErr] = useState<string | undefined>(undefined);
   const [userTabs, setUserTabs] = useState<UserListTab[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(false);
@@ -17,16 +18,15 @@ export default function UserTabs({ setAuthToken, authToken }: UserTabsProps) {
   const decrPage = () => setPage((page) => Math.max(0, page - 1));
 
   useEffect(() => {
-    const token = authToken ?? state?.authToken;
-    if (!token) return;
-    getUserTabs({ authToken: token, page, pageSize: 1 })
+    if (!authToken) return;
+    getUserTabs({ authToken, page, pageSize: 1 })
       .then(({ results, has_more }: UserTabsResult) => {
         setUserTabs(results);
         setHasMore(has_more);
       })
       .catch((err) => {
         if (err?.isToken) {
-          renewToken({ token })
+          renewToken({ token: authToken })
             .then(({ access_token }) => {
               setAuthToken(access_token);
             })
@@ -37,7 +37,7 @@ export default function UserTabs({ setAuthToken, authToken }: UserTabsProps) {
           setErr(err.toString());
         }
       });
-  }, [page, authToken, state.authToken]);
+  }, [page, authToken]);
 
   return (
     <div className="UserTabs">

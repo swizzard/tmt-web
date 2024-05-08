@@ -1,38 +1,28 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Form, redirect } from "react-router-dom";
 import { logout } from "../api";
+import { getToken, setToken } from "../authToken";
 
-export interface LogoutProps {
-  setAuthToken: (authToken: string | undefined) => void;
-  authToken: string | undefined;
+export async function action({ request }: { request: Request }) {
+  const authToken = getToken();
+  if (!authToken) {
+    throw new Error("Unauthorized");
+  }
+  try {
+    await logout({ authToken, data: {} });
+    setToken(null);
+    return redirect("/");
+  } catch (e) {
+    console.error(e);
+    throw new Error("Internal Server Error");
+  }
 }
-export default function Logout({ authToken, setAuthToken }: LogoutProps) {
-  const navigate = useNavigate();
-  const onClick = async () => {
-    if (!authToken) {
-      console.log("already logged out");
-      navigate("/", { state: { authToken: undefined } });
-    } else {
-      try {
-        const resp = await logout({ authToken: authToken!, data: {} });
-        if (resp.ok) {
-          console.log("logged out");
-        } else {
-          console.log("logout error, logging out anyway");
-        }
-        setAuthToken(undefined);
-        navigate("/", { state: { authToken: undefined } });
-      } catch (e: any) {
-        console.error(e);
-      }
-    }
-  };
 
+export default function Logout() {
   return (
     <div className="Logout">
-      <button type="button" onClick={onClick}>
-        Logout
-      </button>
+      <Form method="post" action="/logout">
+        <button type="submit">Logout</button>
+      </Form>
     </div>
   );
 }

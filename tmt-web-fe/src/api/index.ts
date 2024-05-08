@@ -8,7 +8,13 @@ export {
   type LoginInput,
   type SignupInput,
 } from "./users";
-export { createTab, getUserTabs, type NewTabRequest } from "./tabs";
+export {
+  createTab,
+  getUserTabs,
+  type NewTabRequest,
+  type UserListTab,
+  type UserTabsResult,
+} from "./tabs";
 export interface AuthorizedPost<T> {
   authToken: string;
   data: T;
