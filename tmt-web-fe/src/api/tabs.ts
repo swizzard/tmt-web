@@ -1,4 +1,9 @@
-import { AuthorizedPost, PaginatedAuthorizedGet, TMTError } from ".";
+import {
+  AuthorizedGet,
+  AuthorizedPost,
+  PaginatedAuthorizedGet,
+  TMTError,
+} from ".";
 import { API_URL, paginationDataToQuery } from "./_lib";
 
 export async function getUserTabs({
@@ -50,6 +55,53 @@ export async function createTab({
     throw new TMTError("Unknown error");
   }
 }
+
+export async function updateTab(
+  tabId: string,
+  { authToken, data }: AuthorizedPost<UpdateTabInput>,
+) {
+  const endpoint = new URL(`tabs/${tabId}`, API_URL);
+  const resp = await fetch(endpoint.href, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify(data),
+  });
+  try {
+    const responseData = await resp.json();
+    if (!resp.ok) {
+      throw new TMTError(responseData.error);
+    } else {
+      return responseData;
+    }
+  } catch (_e: any) {
+    console.log(resp.body);
+    throw new TMTError("Unknown error");
+  }
+}
+
+export async function getTabDetails(
+  tabId: string,
+  { authToken }: AuthorizedGet,
+): Promise<TabWithTags> {
+  const endpoint = new URL(`tabs/${tabId}/with-tags`, API_URL);
+  const resp = await fetch(endpoint.href, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    throw new TMTError(data.error);
+  } else {
+    return data;
+  }
+}
+
 export interface UserListTab {
   id: string;
   user_id: string;
@@ -78,3 +130,31 @@ export interface NewTabInput {
 }
 
 export type NewTabRequest = AuthorizedPost<NewTabInput>;
+
+export interface UpdateTab {
+  url: string;
+  notes?: string;
+}
+
+export interface UpdateTabInput {
+  tab: UpdateTab;
+  tags: Array<MaybeNewTag>;
+}
+
+export type UpdateTabRequest = AuthorizedPost<UpdateTabInput>;
+
+export type Tab = {
+  id: string;
+  user_id: string;
+  url: string;
+  notes?: string;
+};
+export type Tag = {
+  id: string;
+  user_id: string;
+  tag: string;
+};
+export type TabWithTags = {
+  tab: Tab;
+  tags: Array<Tag>;
+};

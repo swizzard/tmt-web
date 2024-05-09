@@ -10,9 +10,16 @@ export {
 } from "./users";
 export {
   createTab,
+  getTabDetails,
   getUserTabs,
+  updateTab,
   type NewTabInput,
   type NewTabRequest,
+  type Tab,
+  type Tag,
+  type TabWithTags,
+  type UpdateTabInput,
+  type UpdateTabRequest,
   type UserListTab,
   type UserTabsResult,
 } from "./tabs";

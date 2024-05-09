@@ -88,8 +88,8 @@ function UserListTabRow({ id, url }: UserListTab) {
   return (
     <tr key={id}>
       <td>
-        <Link to={`/tabs/${id}/edit`}>edit</Link>
-        <Link to={`/tabs/${id}/delete`}>delete</Link>
+        <Link to={`/tabs/edit/${id}`}>edit</Link>
+        <Link to={`/tabs/delete/${id}`}>delete</Link>
       </td>
       <td>
         <a href={url}>{url}</a>
