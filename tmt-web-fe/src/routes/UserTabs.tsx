@@ -1,6 +1,8 @@
 import { Link, Params, useLoaderData } from "react-router-dom";
 import { getUserTabs, renewToken, UserListTab, UserTabsResult } from "../api";
 import { getToken, setToken } from "../authToken";
+import { FaArrowRight, FaArrowLeft } from "react-icons/fa";
+import "./UserTabs.css";
 
 export type UserTabsLoaderResult = UserTabsResult & { page: number };
 export async function loader({
@@ -48,7 +50,7 @@ export default function UserTabs() {
           <table>
             <thead>
               <tr>
-                <th>actions</th>
+                <th colSpan={2}>actions</th>
                 <th>url</th>
               </tr>
             </thead>
@@ -57,28 +59,42 @@ export default function UserTabs() {
           <div>
             {page > 1 && (
               <Link to={`../personal/${page - 1}`} reloadDocument={true}>
-                prev page
+                <button className="navButton" type="button">
+                  <FaArrowLeft /> prev page
+                </button>
               </Link>
             )}
             {hasMore ? (
               page === 1 ? (
                 <Link to={`../personal/2`} reloadDocument={true}>
-                  next page
+                  <button className="navButton" type="button">
+                    <FaArrowRight /> next page
+                  </button>
                 </Link>
               ) : (
                 <Link to={`../personal/${page + 1}`} reloadDocument={true}>
-                  next page
+                  <button className="navButton" type="button">
+                    <FaArrowRight /> next page
+                  </button>
                 </Link>
               )
             ) : null}
           </div>
         </div>
       )}
-      <div>
-        <Link to="/tabs/create">Create Tab</Link>
+      <div className="buttonWrapper create">
+        <Link to="/tabs/create">
+          <button id="createTabButton" type="button">
+            Create Tab
+          </button>
+        </Link>
       </div>
-      <div>
-        <Link to="/logout">Logout</Link>
+      <div className="buttonWrapper logout">
+        <Link to="/logout">
+          <button id="logoutButton" type="button">
+            Logout
+          </button>
+        </Link>
       </div>
     </div>
   );
@@ -88,8 +104,18 @@ function UserListTabRow({ id, url }: UserListTab) {
   return (
     <tr key={id}>
       <td>
-        <Link to={`/tabs/edit/${id}`}>edit</Link>
-        <Link to={`/tabs/delete/${id}`}>delete</Link>
+        <Link to={`/tabs/edit/${id}`}>
+          <button className="editTab" type="button">
+            edit
+          </button>
+        </Link>
+      </td>
+      <td>
+        <Link to={`/tabs/delete/${id}`}>
+          <button className="deleteTab" type="button">
+            delete
+          </button>
+        </Link>
       </td>
       <td>
         <a href={url}>{url}</a>

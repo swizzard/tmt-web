@@ -19,7 +19,7 @@ export default function useAuthToken() {
   useEffect(() => {
     const token = localStorage.getItem(key);
     setAuthToken_(token);
-  });
+  }, []);
   return { authToken, refreshAuthToken, setAuthToken };
 }
 

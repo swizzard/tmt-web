@@ -1,0 +1,71 @@
+.UserTabs {
+  /* height: 100%; */
+  width: 100%;
+}
+
+.UserTabs table {
+  margin-top: 10px;
+  margin-left: 1%;
+  width: 98%;
+  border: 1px solid #000;
+}
+
+.UserTabs table thead th {
+  border-bottom: 1px solid #000;
+}
+
+.UserTabs table thead th:first-child {
+  border-right: 1px solid #000;
+}
+
+.UserTabs table tbody tr td a {
+  margin-left: 45%;
+  margin-right: 45%;
+}
+
+.UserTabs table tbody tr td:nth-child(2) {
+  border-right: 1px solid #000;
+}
+
+.UserTabs table tbody tr td {
+  padding-bottom: 0.5%;
+}
+
+.UserTabs table tbody tr td:first-child {
+  padding-top: 0.5%;
+}
+
+.UserTabs table tbody tr td a button {
+  color: #fff;
+  display: inline-block;
+  margin: 0 5px;
+  border-radius: 5px;
+}
+
+.UserTabs table tbody tr td a button.editTab {
+  background-color: #4caf50;
+}
+
+.UserTabs table tbody tr td a button.deleteTab {
+  background-color: #900;
+}
+
+.UserTabs div.buttonWrapper {
+  margin: 1% 45%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.UserTabs div.buttonWrapper button {
+  border-radius: 5px;
+}
+
+.UserTabs div.buttonWrapper button#createTabButton {
+  background-color: #3333ff;
+  color: #fff;
+}
+
+.UserTabs div.buttonWrapper.logout {
+  margin-top: 10%;
+}
