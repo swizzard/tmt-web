@@ -13,7 +13,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 
@@ -21,6 +21,7 @@ pub fn tabs_router() -> Router<AppState> {
     Router::new()
         .route("/tabs", post(create))
         .route("/tabs/with-tags", post(create_with_tags))
+        .route("/tabs/:tab_id", delete(delete_tab))
         .route("/tabs/:tab_id", get(get_tab))
         .route("/tabs/:tab_id", put(edit_tab))
         .route("/tabs/:tab_id/with-tags", get(get_tab_with_tags))
@@ -134,6 +135,16 @@ async fn edit_tab(
     let conn = st.conn().await?;
     let updated = tabs::update_tab_and_tags(conn, tab_id, session.user_id.clone(), payload).await?;
     Ok(Json(updated))
+}
+
+async fn delete_tab(
+    State(st): State<AppState>,
+    session: Session,
+    Path(tab_id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let conn = st.conn().await?;
+    tabs::delete_tab(conn, session.user_id.clone(), tab_id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[cfg(test)]
@@ -1006,6 +1017,97 @@ mod tests {
         let c = pool.get().await?;
         let actual_tags = get_tab_tags(c, user_id.clone(), tab_id.clone()).await?;
         assert_eq!(3, actual_tags.len());
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_delete_tab_ok() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tabs_router())?;
+        let c = pool.get().await?;
+
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_email = user.email.clone();
+        let user_id = user.id.clone();
+        let url = String::from("https://example.com");
+        let notes: Option<String> = Some("notes".into());
+        let tab_data = NewTab {
+            user_id: user_id.clone(),
+            url: url.clone(),
+            notes: notes.clone(),
+        };
+        let c = pool.get().await?;
+        let tab = tabs::new_tab(c, tab_data).await?;
+        let tab_id = tab.id.clone();
+        let session = sessions::new_session(pool.clone(), user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let resp = server
+            .delete(&format!("/tabs/{}", tab_id))
+            .add_header(header_name, header_value)
+            .await;
+        resp.assert_status(StatusCode::NO_CONTENT);
+        let c = pool.get().await?;
+        let get_tab_err = tabs::get_tab(c, user_id.clone(), tab_id.clone())
+            .await
+            .expect_err("tab not deleted");
+        assert!(matches!(get_tab_err, AppError::NotFound));
+
+        let c = pool.get().await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
+        Ok(())
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_delete_tab_wrong_user() -> anyhow::Result<()> {
+        let pool = test_pool_from_env();
+        let server = test_app(tabs_router())?;
+
+        let c = pool.get().await?;
+        let mut user_data = Faker.fake::<NewConfirmedUser>();
+        user_data.confirmed = true;
+        let user = users::new_user_confirmed(c, user_data).await?;
+        let user_id = user.id.clone();
+
+        let c = pool.get().await?;
+        let mut other_user_data = Faker.fake::<NewConfirmedUser>();
+        other_user_data.confirmed = true;
+        let other_user = users::new_user_confirmed(c, other_user_data).await?;
+        let other_user_email = other_user.email.clone();
+        let other_user_id = other_user.id.clone();
+
+        let url = String::from("https://example.com");
+        let notes: Option<String> = Some("notes".into());
+        let tab_data = NewTab {
+            user_id: user_id.clone(),
+            url: url.clone(),
+            notes: notes.clone(),
+        };
+        let c = pool.get().await?;
+        let tab = tabs::new_tab(c, tab_data).await?;
+        let tab_id = tab.id.clone();
+
+        let session = sessions::new_session(pool.clone(), other_user_email).await?;
+        let token = Claims::from_session(&session).test_to_token()?;
+        let bearer = format!("Bearer {}", token);
+        let header_value = header::HeaderValue::from_str(&bearer)?;
+        let header_name = header::AUTHORIZATION;
+        let resp = server
+            .delete(&format!("/tabs/{}", tab_id))
+            .add_header(header_name, header_value)
+            .await;
+        resp.assert_status(StatusCode::NOT_FOUND);
+        let c = pool.get().await?;
+        tabs::get_tab(c, user_id.clone(), tab_id.clone()).await?;
+
+        let c = pool.get().await?;
+        tabs::delete_user_tabs(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        users::deconfirm_user(c, user_id.clone()).await?;
+        let c = pool.get().await?;
+        tabs::delete_user_tabs(c, other_user_id.clone()).await?;
         Ok(())
     }
 }

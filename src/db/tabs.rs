@@ -221,29 +221,30 @@ pub async fn update_tab_and_tags(
     })
 }
 
-#[allow(dead_code)]
 pub async fn delete_tab(conn: Conn, user_id: String, tab_id: String) -> Result<usize, AppError> {
-    conn.interact(|conn| {
-        diesel::delete(
-            tabs_dsl::tabs
-                .filter(tabs_dsl::id.eq(tab_id))
-                .filter(tabs_dsl::user_id.eq(user_id)),
-        )
-        .execute(conn)
-    })
-    .await
-    .map_err(|e| {
-        tracing::error!("error deleting tab: {:?}", e);
-        AppError::DBError
-    })?
-    .map_err(|e| {
-        if err_is_not_found(&e) {
-            AppError::NotFound
-        } else {
+    let res = conn
+        .interact(|conn| {
+            diesel::delete(
+                tabs_dsl::tabs
+                    .filter(tabs_dsl::id.eq(tab_id))
+                    .filter(tabs_dsl::user_id.eq(user_id)),
+            )
+            .execute(conn)
+        })
+        .await
+        .map_err(|e| {
             tracing::error!("error deleting tab: {:?}", e);
             AppError::DBError
-        }
-    })
+        })?
+        .map_err(|e| {
+            tracing::error!("error deleting tab: {:?}", e);
+            AppError::DBError
+        });
+    match res {
+        Ok(0) => Err(AppError::NotFound),
+        Ok(n) => Ok(n),
+        Err(e) => Err(e),
+    }
 }
 
 #[cfg(test)]
