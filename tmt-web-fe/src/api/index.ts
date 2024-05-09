@@ -10,6 +10,7 @@ export {
 } from "./users";
 export {
   createTab,
+  deleteTab,
   getTabDetails,
   getUserTabs,
   updateTab,
@@ -29,6 +30,10 @@ export interface AuthorizedPost<T> {
 }
 
 export interface AuthorizedGet {
+  authToken: string;
+}
+
+export interface AuthorizedDelete {
   authToken: string;
 }
 

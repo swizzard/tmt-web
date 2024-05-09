@@ -69,13 +69,10 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
               },
               {
                 path: "delete/:tabId",
-                element: (
-                  <routes.DeleteTab
-                    authToken={authToken}
-                    setAuthToken={setAuthToken}
-                  />
-                ),
+                element: <routes.DeleteTab />,
                 errorElement: <routes.Error />,
+                action: routes.deleteTabAction,
+                loader: routes.getTabDetailsLoader,
               },
             ],
           },

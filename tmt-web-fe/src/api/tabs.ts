@@ -1,4 +1,5 @@
 import {
+  AuthorizedDelete,
   AuthorizedGet,
   AuthorizedPost,
   PaginatedAuthorizedGet,
@@ -53,6 +54,25 @@ export async function createTab({
   } catch (_e: any) {
     console.log(resp.body);
     throw new TMTError("Unknown error");
+  }
+}
+
+export async function deleteTab(
+  tabId: string,
+  { authToken }: AuthorizedDelete,
+) {
+  const endpoint = new URL(`tabs/${tabId}`, API_URL);
+  const resp = await fetch(endpoint.href, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+  });
+  if (!resp.ok) {
+    throw new TMTError(resp.statusText);
+  } else {
+    return;
   }
 }
 

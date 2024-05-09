@@ -3,7 +3,7 @@ export {
   action as confirmUserAction,
 } from "./ConfirmUser";
 export { default as CreateTab, action as createTabAction } from "./CreateTab";
-export { default as DeleteTab } from "./DeleteTab";
+export { default as DeleteTab, action as deleteTabAction } from "./DeleteTab";
 export { default as EditTab, action as editTabAction } from "./EditTab";
 export { default as Error } from "./Error";
 export { default as Login, action as loginAction } from "./Login";
