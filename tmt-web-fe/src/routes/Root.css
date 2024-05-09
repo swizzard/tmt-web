@@ -1,0 +1,12 @@
+div.App p a button {
+  border-radius: 5px;
+}
+
+div.App p a button#logout {
+  background-color: #b8baa8;
+}
+
+div.App p a button#yourTabs {
+  background-color: #005b4d;
+  color: #f9faf0;
+}
