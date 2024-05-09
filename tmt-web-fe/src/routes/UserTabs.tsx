@@ -15,7 +15,7 @@ export async function loader({
   const page = parseInt(params.page || "1", 10);
   console.log("loader page", page);
   const f = async (tk: string) =>
-    getUserTabs({ authToken: tk, page, pageSize: 1 });
+    getUserTabs({ authToken: tk, page, pageSize: 10 });
   let resp: UserTabsResult | undefined = undefined;
   try {
     resp = await f(authToken);

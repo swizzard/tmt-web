@@ -1,16 +1,16 @@
-import React, { useState } from "react";
-import { useLocation, Link } from "react-router-dom";
-export interface RootProps {
-  authToken?: string | undefined;
-}
-export default function Root({ authToken }: RootProps) {
-  const { state } = useLocation();
+import { Link } from "react-router-dom";
+import useAuthToken from "../authToken";
+export default function Root() {
+  const { authToken } = useAuthToken();
   return (
     <div className="App">
-      {authToken ?? state?.authToken ? (
+      {authToken ? (
         <div>
           <h1>Welcome!</h1>
           <p>You are logged in.</p>
+          <p>
+            <Link to="/tabs/personal/1">Your Tabs</Link>
+          </p>
           <p>
             <Link to="/logout">Logout</Link>
           </p>

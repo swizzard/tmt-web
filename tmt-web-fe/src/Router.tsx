@@ -1,12 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import * as routes from "./routes";
 
-export interface RouterProps {
-  setAuthToken: (authToken: string | undefined) => void;
-  authToken: string | undefined;
-}
-
-export default function router({ authToken, setAuthToken }: RouterProps) {
+export default function router() {
   return createBrowserRouter(
     [
       {
@@ -14,7 +9,7 @@ export default function router({ authToken, setAuthToken }: RouterProps) {
         children: [
           {
             path: "",
-            element: <routes.Root authToken={authToken} />,
+            element: <routes.Root />,
             errorElement: <routes.Error />,
           },
           {
