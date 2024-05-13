@@ -1,6 +1,8 @@
 import { Form, Params, redirect, useLoaderData } from "react-router-dom";
 import { renewToken, updateTab, TabWithTags, UpdateTabInput } from "../api";
 import { getToken, setToken } from "../authToken";
+import "./EditTab.css";
+import TabForm from "./_tabForm";
 
 export async function action({
   request,
@@ -45,12 +47,7 @@ export default function EditTab() {
   return (
     <div className="editTab">
       <Form method="post">
-        <label htmlFor="url">URL</label>
-        <input type="url" id="url" name="url" defaultValue={tab.tab.url} />
-        <label htmlFor="notes">Notes</label>
-        <textarea id="notes" name="notes" defaultValue={tab.tab.notes} />
-        <label htmlFor="tags">Tags</label>
-        <select id="tags" name="tags" multiple></select>
+        <TabForm tab={tab} />
         <button type="submit">Update Tab</button>
       </Form>
     </div>

@@ -1,8 +1,8 @@
-div.createTab {
+div.editTab {
   min-height: 100%;
 }
 
-div.createTab form {
+div.editTab form {
   margin-left: 0.5vw;
   margin-top: 0.5vw;
 }
@@ -23,5 +23,6 @@ textarea {
 }
 
 button[type="submit"] {
+  display: block;
   margin: 0.5vw 0 0 0;
 }

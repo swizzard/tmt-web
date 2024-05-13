@@ -1,16 +1,14 @@
-import useAuthToken from "../authToken";
 import { Link, Outlet } from "react-router-dom";
 import "./Root.css";
 
-export default function Root() {
-  const { authToken } = useAuthToken();
+function Root({ loggedIn }: { loggedIn: boolean }) {
   return (
     <>
       <div id="top-bar">
         <h1>Too Many Tabs</h1>
       </div>
       <div id="content-wrapper">
-        {authToken && <LoggedInSidebar />}
+        {loggedIn && <LoggedInSidebar />}
         <div id="content">
           <Outlet />
         </div>
@@ -23,17 +21,17 @@ export default function Root() {
 function LoggedInSidebar() {
   return (
     <div id="side-bar">
-      <ul className="nav vertical">
-        <li>
-          <Link to="/">Home</Link>
-        </li>
-        <li>
-          <Link to="/tabs/personal/1">Your Tabs</Link>
-        </li>
-        <li>
-          <Link to="/logout">Logout</Link>
-        </li>
-      </ul>
+      <div className="nav vertical">
+        <Link to="/tabs/personal/1">My Tabs</Link>
+        <Link to="/tabs/create">New Tab</Link>
+        <Link to="/logout">Logout</Link>
+      </div>
     </div>
   );
+}
+export function LoggedInRoot() {
+  return <Root loggedIn={true} />;
+}
+export function LoggedOutRoot() {
+  return <Root loggedIn={false} />;
 }

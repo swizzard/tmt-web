@@ -1,0 +1,16 @@
+div#Login {
+  margin-left: 0.5vw;
+  border: 2px solid var(--tmt-black);
+}
+
+div#Login form {
+  width: 50%;
+  padding-top: 0.5vw;
+}
+
+div#Login form button {
+  background-color: var(--tmt-dark-green);
+  color: var(--tmt-white);
+  margin-top: 10px;
+  display: block;
+}

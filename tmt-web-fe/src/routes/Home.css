@@ -1,8 +1,20 @@
-div.Home p a button#logout {
+div#Home {
+  margin-left: 0.5vw;
+}
+
+div#NotLoggedIn {
+  border: 2px solid var(--tmt-black);
+}
+
+div#NotLoggedIn>* {
+  margin-left: 0.5vw;
+}
+
+div#Home p a button#logout {
   background-color: var(--tmt-gray);
 }
 
-div.Home p a button#yourTabs {
+div#Home p a button#yourTabs {
   background-color: var(--tmt-dark-green);
   color: var(--tmt-white);
 }

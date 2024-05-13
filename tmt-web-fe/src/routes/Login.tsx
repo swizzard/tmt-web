@@ -1,6 +1,7 @@
 import { Form, redirect } from "react-router-dom";
 import { authorize, LoginInput } from "../api";
 import { setToken } from "../authToken";
+import "./Login.css";
 
 export async function action({ request }: { request: Request }) {
   const formData = await request.formData();
@@ -19,7 +20,7 @@ export async function action({ request }: { request: Request }) {
 
 export default function Login() {
   return (
-    <div className="Login">
+    <div id="Login">
       <Form method="post" action="/login">
         <label htmlFor="email">Email</label>
         <input type="email" id="email" name="email" />

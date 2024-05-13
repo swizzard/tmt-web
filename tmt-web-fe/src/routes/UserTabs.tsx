@@ -89,13 +89,6 @@ export default function UserTabs() {
           </button>
         </Link>
       </div>
-      <div className="buttonWrapper logout">
-        <Link to="/logout">
-          <button id="logoutButton" type="button">
-            Logout
-          </button>
-        </Link>
-      </div>
     </div>
   );
 }

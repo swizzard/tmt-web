@@ -25,13 +25,3 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
-
-div#root {
-  height: 100%;
-  min-width: 100%;
-  background-color: var(--tmt-white);
-}
-
-div#root button {
-  border-radius: 5px;
-}

@@ -1,6 +1,7 @@
 import { Form, redirect } from "react-router-dom";
 import { createTab, renewToken, type NewTabInput } from "../api";
 import { getToken, setToken } from "../authToken";
+import TabForm from "./_tabForm";
 import "./CreateTab.css";
 
 export async function action({ request }: { request: Request }) {
@@ -39,14 +40,7 @@ export default function CreateTab() {
   return (
     <div className="createTab">
       <Form method="post" action="/tabs/create">
-        <label htmlFor="url">URL</label>
-        <input type="url" id="url" name="url" />
-        <label htmlFor="notes">Notes</label>
-        <textarea rows={10} cols={50} id="notes" name="notes" />
-        <div className="tags">
-          <label htmlFor="tags">Tags</label>
-          <select id="tags" name="tags" multiple></select>
-        </div>
+        <TabForm />
         <button type="submit">Create Tab</button>
       </Form>
     </div>

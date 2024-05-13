@@ -6,7 +6,7 @@ export default function router() {
     [
       {
         path: "/",
-        element: <routes.Root />,
+        element: <routes.LoggedOutRoot />,
         children: [
           {
             path: "",
@@ -37,40 +37,41 @@ export default function router() {
             errorElement: <routes.Error />,
             action: routes.confirmUserAction,
           },
+        ],
+      },
+      {
+        path: "/tabs",
+        element: <routes.LoggedInRoot />,
+        children: [
           {
-            path: "tabs",
-            children: [
-              {
-                path: "",
-                element: <Navigate to="/tabs/personal/1" />,
-              },
-              {
-                path: "create",
-                element: <routes.CreateTab />,
-                errorElement: <routes.Error />,
-                action: routes.createTabAction,
-              },
-              {
-                path: "personal/:page",
-                element: <routes.UserTabs />,
-                errorElement: <routes.Error />,
-                loader: routes.userTabsLoader,
-              },
-              {
-                path: "edit/:tabId",
-                element: <routes.EditTab />,
-                errorElement: <routes.Error />,
-                action: routes.editTabAction,
-                loader: routes.getTabDetailsLoader,
-              },
-              {
-                path: "delete/:tabId",
-                element: <routes.DeleteTab />,
-                errorElement: <routes.Error />,
-                action: routes.deleteTabAction,
-                loader: routes.getTabDetailsLoader,
-              },
-            ],
+            path: "",
+            element: <Navigate to="/tabs/personal/1" />,
+          },
+          {
+            path: "create",
+            element: <routes.CreateTab />,
+            errorElement: <routes.Error />,
+            action: routes.createTabAction,
+          },
+          {
+            path: "personal/:page",
+            element: <routes.UserTabs />,
+            errorElement: <routes.Error />,
+            loader: routes.userTabsLoader,
+          },
+          {
+            path: "edit/:tabId",
+            element: <routes.EditTab />,
+            errorElement: <routes.Error />,
+            action: routes.editTabAction,
+            loader: routes.getTabDetailsLoader,
+          },
+          {
+            path: "delete/:tabId",
+            element: <routes.DeleteTab />,
+            errorElement: <routes.Error />,
+            action: routes.deleteTabAction,
+            loader: routes.getTabDetailsLoader,
           },
         ],
       },
