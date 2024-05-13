@@ -1,6 +1,7 @@
-import { Form, redirect } from "react-router-dom";
+import { Form, Link, redirect } from "react-router-dom";
 import { logout } from "../api";
 import { getToken, setToken } from "../authToken";
+import "./Logout.css";
 
 export async function action({ request }: { request: Request }) {
   const authToken = getToken();
@@ -20,9 +21,13 @@ export async function action({ request }: { request: Request }) {
 export default function Logout() {
   return (
     <div className="Logout">
+      <h1>Logout?</h1>
       <Form method="post" action="/logout">
         <button type="submit">Logout</button>
       </Form>
+      <Link to="/tabs/personal/1">
+        <button type="button">Home</button>
+      </Link>
     </div>
   );
 }

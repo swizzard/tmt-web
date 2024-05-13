@@ -1,3 +1,11 @@
+:root {
+  --tmt-white: #f9faf0;
+  --tmt-dark-green: #005b4d;
+  --tmt-gray: #b8baa8;
+  --tmt-dark-brown: #464838;
+  --tmt-black: #383a2b;
+}
+
 html {
   height: 100%;
   min-width: 100%;
@@ -13,13 +21,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-div#root {
-  height: 100%;
-  min-width: 100%;
-  background-color: #f9faf0;
-}
-
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+div#root {
+  height: 100%;
+  min-width: 100%;
+  background-color: var(--tmt-white);
+}
+
+div#root button {
+  border-radius: 5px;
 }

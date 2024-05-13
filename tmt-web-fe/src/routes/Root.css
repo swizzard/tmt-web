@@ -1,12 +1,36 @@
-div.App p a button {
-  border-radius: 5px;
+div#top-bar {
+  position: sticky;
+  top: 0.5vw;
+  left: 1vw;
+  margin-left: 0.5vw;
+  border: 2px solid var(--tmt-black);
 }
 
-div.App p a button#logout {
-  background-color: #b8baa8;
+div#top-bar h1 {
+  margin-top: 0px;
+  margin-left: 0.5vw;
 }
 
-div.App p a button#yourTabs {
-  background-color: #005b4d;
-  color: #f9faf0;
+div#content-wrapper {
+  display: flex;
+  height: 100%;
+  padding-top: 0.5vw;
+}
+
+div#side-bar {
+  flex-grow: 1;
+  flex-shrink: 3;
+  margin-left: 0.5vw;
+  border-right: 2px solid var(--tmt-black);
+  border-left: 2px solid var(--tmt-black);
+  /* height: 100%; */
+}
+
+/* div#side-bar ul.nav.vertical { */
+/*   padding-left: 0; */
+/* } */
+
+div#content {
+  margin-top: 0.5vw;
+  flex-grow: 3;
 }

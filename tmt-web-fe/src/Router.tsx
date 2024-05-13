@@ -6,10 +6,11 @@ export default function router() {
     [
       {
         path: "/",
+        element: <routes.Root />,
         children: [
           {
             path: "",
-            element: <routes.Root />,
+            element: <routes.Home />,
             errorElement: <routes.Error />,
           },
           {

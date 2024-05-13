@@ -1,0 +1,9 @@
+div.Logout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+div.Logout form {
+  margin: 10px;
+}

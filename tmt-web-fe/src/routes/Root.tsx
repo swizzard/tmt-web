@@ -1,38 +1,39 @@
-import { Link } from "react-router-dom";
 import useAuthToken from "../authToken";
+import { Link, Outlet } from "react-router-dom";
 import "./Root.css";
+
 export default function Root() {
   const { authToken } = useAuthToken();
   return (
-    <div className="App">
-      {authToken ? (
-        <div>
-          <h1>Too Many Tabs</h1>
-          <p>You are logged in.</p>
-          <p>
-            <Link to="/tabs/personal/1">
-              <button type="button" id="yourTabs">
-                Your Tabs
-              </button>
-            </Link>
-          </p>
-          <p>
-            <Link to="/logout">
-              <button type="button" id="logout">
-                Logout
-              </button>
-            </Link>
-          </p>
+    <>
+      <div id="top-bar">
+        <h1>Too Many Tabs</h1>
+      </div>
+      <div id="content-wrapper">
+        {authToken && <LoggedInSidebar />}
+        <div id="content">
+          <Outlet />
         </div>
-      ) : (
-        <div>
-          <h1>Welcome!</h1>
-          <p>You are not logged in.</p>
-          <p>
-            <Link to="/login">Login</Link>
-          </p>
-        </div>
-      )}
+      </div>
+      <div id="footer"></div>
+    </>
+  );
+}
+
+function LoggedInSidebar() {
+  return (
+    <div id="side-bar">
+      <ul className="nav vertical">
+        <li>
+          <Link to="/">Home</Link>
+        </li>
+        <li>
+          <Link to="/tabs/personal/1">Your Tabs</Link>
+        </li>
+        <li>
+          <Link to="/logout">Logout</Link>
+        </li>
+      </ul>
     </div>
   );
 }

@@ -1,0 +1,8 @@
+div.Home p a button#logout {
+  background-color: var(--tmt-gray);
+}
+
+div.Home p a button#yourTabs {
+  background-color: var(--tmt-dark-green);
+  color: var(--tmt-white);
+}
